@@ -39,6 +39,23 @@ class AutomationService extends EventEmitter {
     return this.getState();
   }
 
+  async sendHelperRequest(type, payload, { timeoutMs = 10000, retries = 0 } = {}) {
+    let attempt = 0;
+    while (true) {
+      try {
+        if (!this.helperClient.child || this.helperClient.getStatus().lifecycle === 'stopped') {
+          await this.helperClient.start();
+        }
+        return await this.helperClient.sendRequest(type, payload, timeoutMs);
+      } catch (error) {
+        if (attempt >= retries) {
+          throw error;
+        }
+        attempt += 1;
+      }
+    }
+  }
+
   async dispose() {
     if (this.buffTickTimer) {
       clearInterval(this.buffTickTimer);
@@ -74,7 +91,7 @@ class AutomationService extends EventEmitter {
     const profile = this.profileStore.updateProfile(profileId, changes);
     this.reloadDocument();
     if (this.state.activeProfileId === profileId) {
-      this.applyProfile(profile);
+      this.applyProfile(profile, { preserveRuntimeState: true, preserveBuffRuntimeState: true, preserveAttachmentStatus: true });
       await this.syncProfileToHelper();
     } else {
       this.state.profilesSummary = this.profileStore.listProfilesSummary();
@@ -101,26 +118,56 @@ class AutomationService extends EventEmitter {
 
   async setMasterEnabled(enabled) {
     this.state.runtimeState.masterEnabled = Boolean(enabled);
-    await this.syncRuntimeToHelper();
     this.emitStateChanged();
+    await this.syncRuntimeToHelper();
     return this.getState();
   }
 
   async setRuntimeToggle(toggleId, enabled) {
     validateRuntimeToggleId(toggleId);
     this.state.runtimeState[toggleId] = Boolean(enabled);
-    await this.syncRuntimeToHelper();
     this.emitStateChanged();
+    await this.syncRuntimeToHelper();
     return this.getState();
+  }
+
+  async focusTarget() {
+    try {
+      const result = await this.sendHelperRequest('focus-target', {}, { timeoutMs: 5000, retries: 1 });
+      if (result?.target) {
+        this.state.gameAttachmentStatus = {
+          ...this.state.gameAttachmentStatus,
+          ...result.target,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      this.state.lastError = null;
+      this.emitStateChanged();
+      return result;
+    } catch (error) {
+      this.setLastError(error);
+      this.emitStateChanged();
+      return { ok: false, error: { code: error.code || 'AUTOMATION_FOCUS_TARGET_FAILED', message: error.message } };
+    }
   }
 
   async testAction(action, payload = {}) {
     validateTestAction(action);
     try {
-      const result = await this.helperClient.sendRequest('perform-test-action', { action, ...payload });
+      const result = await this.sendHelperRequest('perform-test-action', { action, ...payload }, { timeoutMs: 5000, retries: 1 });
+      if (result?.target) {
+        this.state.gameAttachmentStatus = {
+          ...this.state.gameAttachmentStatus,
+          ...result.target,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      this.state.lastError = null;
+      this.emitStateChanged();
       return { ok: true, result };
     } catch (error) {
       this.setLastError(error);
+      this.emitStateChanged();
       return { ok: false, error: { code: error.code || 'AUTOMATION_TEST_ACTION_FAILED', message: error.message } };
     }
   }
@@ -140,7 +187,7 @@ class AutomationService extends EventEmitter {
     this.state.runtimeState.ctrlHeldEnabled = false;
 
     try {
-      await this.helperClient.sendRequest('emergency-stop', {});
+      await this.sendHelperRequest('emergency-stop', {}, { timeoutMs: 3000, retries: 0 });
     } catch (error) {
       this.setLastError(error);
     }
@@ -312,11 +359,10 @@ class AutomationService extends EventEmitter {
         };
       }
 
-      if (message.type === 'runtime-applied' && message.payload?.runtime) {
-        this.state.runtimeState = {
-          ...this.state.runtimeState,
-          ...message.payload.runtime,
-        };
+      if (message.type === 'runtime-applied' && message.payload) {
+        // Only merge target status from helper; the service owns toggle state.
+        // Merging toggle booleans from runtime-applied caused a race where a stale
+        // response would overwrite a newer toggle set by the user.
         if (message.payload.target) {
           this.state.gameAttachmentStatus = {
             ...this.state.gameAttachmentStatus,
@@ -343,38 +389,69 @@ class AutomationService extends EventEmitter {
     this.document = this.profileStore.load();
   }
 
-  applyProfile(profile) {
+  applyProfile(profile, options = {}) {
+    const { preserveRuntimeState = false, preserveBuffRuntimeState = false, preserveAttachmentStatus = false } = options;
+    const previousRuntimeState = clone(this.state.runtimeState || {});
+    const previousBuffRuntimeState = clone(this.state.buffRuntimeState || {});
+    const previousAttachmentStatus = clone(this.state.gameAttachmentStatus || {});
     this.activeProfile = clone(profile);
     this.state.activeProfileId = profile.id;
     this.state.activeProfile = clone(profile);
     this.state.profilesSummary = this.profileStore.listProfilesSummary();
-    this.state.runtimeState = clone(profile.runtime);
+    this.state.runtimeState = preserveRuntimeState
+      ? {
+          ...clone(profile.runtime),
+          masterEnabled: Boolean(previousRuntimeState.masterEnabled),
+          leftClickerEnabled: Boolean(previousRuntimeState.leftClickerEnabled),
+          rightClickerEnabled: Boolean(previousRuntimeState.rightClickerEnabled),
+          f7Enabled: Boolean(previousRuntimeState.f7Enabled),
+          shiftHeldEnabled: Boolean(previousRuntimeState.shiftHeldEnabled),
+          ctrlHeldEnabled: Boolean(previousRuntimeState.ctrlHeldEnabled),
+        }
+      : clone(profile.runtime);
     this.state.overlayState = clone(profile.overlays);
-    this.state.gameAttachmentStatus = {
-      attached: false,
-      isForeground: false,
-      target: clone(profile.gameTarget),
-      updatedAt: new Date().toISOString(),
-    };
-    this.state.buffRuntimeState = createEmptyBuffRuntimeState(profile.buffs);
+    this.state.gameAttachmentStatus = preserveAttachmentStatus
+      ? {
+          ...previousAttachmentStatus,
+          target: clone(profile.gameTarget),
+          updatedAt: new Date().toISOString(),
+        }
+      : {
+          attached: false,
+          isForeground: false,
+          target: clone(profile.gameTarget),
+          updatedAt: new Date().toISOString(),
+        };
+    this.state.buffRuntimeState = preserveBuffRuntimeState
+      ? Object.fromEntries(Object.entries(createEmptyBuffRuntimeState(profile.buffs)).map(([buffId, emptyState]) => [
+          buffId,
+          {
+            ...emptyState,
+            ...(previousBuffRuntimeState[buffId] || {}),
+          },
+        ]))
+      : createEmptyBuffRuntimeState(profile.buffs);
     this.emitStateChanged();
   }
 
   async syncProfileToHelper() {
     const profile = this.profileStore.getActiveProfile();
-    this.applyProfile(profile);
+    this.applyProfile(profile, { preserveRuntimeState: true, preserveBuffRuntimeState: true, preserveAttachmentStatus: true });
 
     try {
-      await this.helperClient.sendRequest('configure-session', {
+      await this.sendHelperRequest('configure-session', {
         profileId: profile.id,
         heartbeatIntervalMs: 10000,
-      });
-      await this.helperClient.sendRequest('set-target', profile.gameTarget);
-      await this.helperClient.sendRequest('set-runtime-config', {
+      }, { timeoutMs: 10000, retries: 1 });
+      await this.sendHelperRequest('set-target', profile.gameTarget, { timeoutMs: 10000, retries: 1 });
+      await this.sendHelperRequest('set-runtime-config', {
         runtime: profile.runtime,
         hotkeys: profile.hotkeys,
-      });
-      await this.helperClient.sendRequest('register-hotkeys', { hotkeys: profile.hotkeys });
+      }, { timeoutMs: 10000, retries: 1 });
+      await this.sendHelperRequest('register-hotkeys', { hotkeys: profile.hotkeys }, { timeoutMs: 10000, retries: 1 });
+      await this.sendHelperRequest('set-toggle-state', {
+        runtime: this.state.runtimeState,
+      }, { timeoutMs: 10000, retries: 1 });
       this.state.lastError = null;
     } catch (error) {
       this.setLastError(error);
@@ -385,9 +462,9 @@ class AutomationService extends EventEmitter {
 
   async syncRuntimeToHelper() {
     try {
-      await this.helperClient.sendRequest('set-toggle-state', {
+      await this.sendHelperRequest('set-toggle-state', {
         runtime: this.state.runtimeState,
-      });
+      }, { timeoutMs: 5000, retries: 1 });
       this.state.lastError = null;
     } catch (error) {
       this.setLastError(error);

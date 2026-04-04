@@ -108,22 +108,35 @@ function normalizeString(value, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
+function normalizeWindowTitlePattern(value, fallback = 'ClassicConquer') {
+  const raw = normalizeString(value, fallback).trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  if (/classicconquer/i.test(raw)) {
+    return 'ClassicConquer';
+  }
+
+  return raw;
+}
+
 function normalizeBoolean(value, fallback = false) {
   return typeof value === 'boolean' ? value : fallback;
 }
 
 function createDefaultHotkeys() {
   return {
-    [HOTKEY_IDS.MASTER_TOGGLE]: { binding: 'MouseMiddle', enabled: true, passThrough: true, scope: 'global', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.LEFT_TOGGLE]: { binding: 'Semicolon', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.RIGHT_TOGGLE]: { binding: 'Quote', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.F7_TOGGLE]: { binding: 'Comma', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.SHIFT_TOGGLE]: { binding: 'BracketLeft', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.CTRL_TOGGLE]: { binding: 'BracketRight', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.EMERGENCY_STOP]: { binding: 'Escape', enabled: true, passThrough: false, scope: 'global', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.STIGMA_ACTIVATE]: { binding: 'F1', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.SHIELD_ACTIVATE]: { binding: 'F2', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
-    [HOTKEY_IDS.INVISIBILITY_ACTIVATE]: { binding: 'F3', enabled: true, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.MASTER_TOGGLE]: { binding: 'MouseMiddle', enabled: false, passThrough: true, scope: 'global', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.LEFT_TOGGLE]: { binding: 'Semicolon', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.RIGHT_TOGGLE]: { binding: 'Quote', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.F7_TOGGLE]: { binding: 'Comma', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.SHIFT_TOGGLE]: { binding: 'BracketLeft', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.CTRL_TOGGLE]: { binding: 'BracketRight', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.EMERGENCY_STOP]: { binding: 'Escape', enabled: false, passThrough: false, scope: 'global', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.STIGMA_ACTIVATE]: { binding: 'F1', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.SHIELD_ACTIVATE]: { binding: 'F2', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
+    [HOTKEY_IDS.INVISIBILITY_ACTIVATE]: { binding: 'F3', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
     [HOTKEY_IDS.STIGMA_PAUSE]: { binding: '', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
     [HOTKEY_IDS.SHIELD_PAUSE]: { binding: '', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
     [HOTKEY_IDS.INVISIBILITY_PAUSE]: { binding: '', enabled: false, passThrough: true, scope: 'game-focused', repeatPolicy: 'single-fire' },
@@ -159,7 +172,7 @@ function normalizeGameTarget(gameTarget = {}) {
       ? source.matchMode
       : 'process-first',
     processName: normalizeString(source.processName, ''),
-    windowTitlePattern: normalizeString(source.windowTitlePattern, 'Shinsei - ClassicConquer'),
+    windowTitlePattern: normalizeWindowTitlePattern(source.windowTitlePattern, 'ClassicConquer'),
     requireForegroundForInput: normalizeBoolean(source.requireForegroundForInput, true),
     windowPollIntervalMs: clampInteger(source.windowPollIntervalMs, 500, 50),
     foregroundPollMode: source.foregroundPollMode === 'fast' ? 'fast' : 'fast',

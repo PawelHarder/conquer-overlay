@@ -29,9 +29,10 @@
       cursor: pointer;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis;
+      user-select: text;
+      -webkit-user-select: text;
+      cursor: text;
     }
-    .autocomplete-item:hover,
     .autocomplete-item.focused { background: var(--bg-hover); color: var(--gold); }
 
     /* ── Server Selector Bar ── */
@@ -301,6 +302,12 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+    }
+
     body {
       font-family: var(--ui);
       font-size: 14px;
@@ -313,7 +320,9 @@
 
     /* ── Main Overlay Shell ── */
     #overlay {
-      width: 420px;
+      width: min(420px, 100vw);
+      height: 100vh;
+      max-height: 100vh;
       background: var(--bg-panel);
       border: 1px solid var(--border);
       border-top: 2px solid var(--gold-dim);
@@ -418,14 +427,21 @@
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
+      min-height: 0;
     }
 
     #content::-webkit-scrollbar { width: 4px; }
     #content::-webkit-scrollbar-track { background: var(--bg-deep); }
     #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    .tab-panel { display: none; padding: 12px; }
+    .tab-panel { display: none; padding: 12px; min-height: 100%; }
     .tab-panel.active { display: block; }
+
+    #tab-settings {
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 20px;
+    }
 
     /* ── Section Labels ── */
     .section-label {
@@ -1250,7 +1266,10 @@
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Diagnostics</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);">Diagnostics</div>
+          <button class="btn-secondary" id="automation-copy-log" style="padding:3px 8px;font-size:10px;">Copy</button>
+        </div>
         <div class="automation-log" id="automation-log">Waiting for automation state…</div>
       </div>
 

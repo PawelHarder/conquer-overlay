@@ -1,8 +1,7 @@
-const { app, BrowserWindow, dialog, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
-const { uIOhook, UiohookKey } = require('uiohook-napi');
 const { ProfileStore } = require('./profile-store');
 const { AutomationHelperClient } = require('./automation-helper-client');
 const { AutomationService } = require('./automation-service');
@@ -10,16 +9,18 @@ const { createHudWindow } = require('./hud-window');
 
 const MARKET_BASE_URL = 'https://conqueronline.net';
 const MARKET_REQUEST_TIMEOUT_MS = 10000;
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
 
 let overlayWindow = null;
 let isCollapsed = false;
 let isInteractive = false;
-let altPressed = false;
-let altUsedAsModifier = false;
 let overlayState = null;
 let automationService = null;
 let isShuttingDown = false;
-const automationHotkeysDown = new Set();
 let automationHudWindow = null;
 let automationBuffWindow = null;
 
@@ -43,6 +44,60 @@ function queryDbExternally(mode, filters) {
     windowsHide: true,
   });
   return JSON.parse(stdout || 'null');
+}
+
+function releaseInputModifiersAtStartup() {
+  try {
+    const releaseScript = [
+      'Add-Type @"',
+      'using System;',
+      'using System.Runtime.InteropServices;',
+      'public static class StartupKeyRelease {',
+      '  [StructLayout(LayoutKind.Sequential)] public struct INPUT { public UInt32 type; public InputUnion U; }',
+      '  [StructLayout(LayoutKind.Explicit)] public struct InputUnion { [FieldOffset(0)] public KEYBDINPUT ki; }',
+      '  [StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public UInt16 wVk; public UInt16 wScan; public UInt32 dwFlags; public UInt32 time; public IntPtr dwExtraInfo; }',
+      '  [DllImport("user32.dll", SetLastError=true)] public static extern UInt32 SendInput(UInt32 nInputs, INPUT[] pInputs, int cbSize);',
+      '  const UInt32 INPUT_KEYBOARD = 1;',
+      '  const UInt32 KEYEVENTF_KEYUP = 0x0002;',
+      '  public static void KeyUp(UInt16 vk) {',
+      '    var inputs = new INPUT[] { new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = vk, dwFlags = KEYEVENTF_KEYUP } } } };',
+      '    SendInput((UInt32)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));',
+      '  }',
+      '}',
+      '"@;',
+      'foreach ($vk in 0x10,0x11,0x12,0xA0,0xA1,0xA2,0xA3,0xA4,0xA5) { [StartupKeyRelease]::KeyUp([uint16]$vk) }',
+    ].join('\n');
+
+    execFileSync('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      releaseScript,
+    ], {
+      windowsHide: true,
+      encoding: 'utf8',
+    });
+  } catch (_) {
+    // Ignore startup key-release failures.
+  }
+}
+
+function cleanupOrphanAutomationHelpers() {
+  try {
+    execFileSync('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'conquer-helper-spike\\.ps1' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+    ], {
+      windowsHide: true,
+      encoding: 'utf8',
+    });
+  } catch (_) {
+    // Ignore cleanup failures.
+  }
 }
 
 function buildDbConditions(filters = {}) {
@@ -226,60 +281,6 @@ function getAutomationRendererWindows() {
   return [overlayWindow, automationHudWindow, automationBuffWindow].filter(Boolean);
 }
 
-function matchesAutomationHotkeyBinding(binding, event) {
-  if (!binding) return false;
-  if (binding === 'MouseMiddle') {
-    return event?.kind === 'mouse' && Number(event.button) === 3;
-  }
-
-  const keycode = UiohookKey[binding];
-  return Number.isFinite(keycode) && event?.kind === 'key' && event.keycode === keycode;
-}
-
-function shouldHandleAutomationHotkey(entry) {
-  const capabilities = automationService?.getState?.()?.helperStatus?.capabilities || [];
-  if (capabilities.includes('hotkeyRegistration')) return false;
-  if (!entry?.enabled) return false;
-  if (entry.scope !== 'game-focused') return true;
-  const runtimeState = automationService?.getState?.();
-  return Boolean(runtimeState?.gameAttachmentStatus?.isForeground);
-}
-
-async function handleAutomationHotkeyEvent(event) {
-  if (!automationService) return;
-
-  const hotkeys = automationService.getActiveHotkeys();
-  for (const [hotkeyId, entry] of Object.entries(hotkeys)) {
-    if (!matchesAutomationHotkeyBinding(entry.binding, event)) continue;
-    if (!shouldHandleAutomationHotkey(entry)) return;
-
-    const dedupeKey = `${event.kind}:${entry.binding}`;
-    if (automationHotkeysDown.has(dedupeKey)) return;
-    automationHotkeysDown.add(dedupeKey);
-
-    try {
-      await automationService.triggerHotkey(hotkeyId);
-    } catch (error) {
-      sendDebugMessage(`Automation hotkey failed: ${error.message}`);
-    }
-    return;
-  }
-}
-
-function releaseAutomationHotkeyEvent(event) {
-  if (!event?.kind) return;
-  if (event.kind === 'mouse' && Number(event.button) === 3) {
-    automationHotkeysDown.delete('mouse:MouseMiddle');
-    return;
-  }
-
-  for (const binding of Object.keys(UiohookKey)) {
-    if (UiohookKey[binding] === event.keycode) {
-      automationHotkeysDown.delete(`key:${binding}`);
-    }
-  }
-}
-
 function getAutomationHelperPath() {
   if (process.env.CONQUER_AUTOMATION_HELPER_PATH) {
     return {
@@ -346,6 +347,14 @@ async function setupAutomation() {
       return;
     }
 
+    if (message.type === 'hotkey-triggered') {
+      sendRendererEvent('automation:diagnostic-log', {
+        message: 'Automation hotkey triggered.',
+        details: message.payload ?? null,
+      });
+      return;
+    }
+
     if (message.type === 'log' || message.type === 'warning' || message.type === 'error') {
       sendRendererEvent('automation:diagnostic-log', message.payload ?? message);
     }
@@ -368,10 +377,18 @@ function createAutomationOverlayWindows() {
     width: 190,
     height: 260,
   });
+  automationHudWindow.on('closed', () => {
+    automationHudWindow = null;
+  });
+  automationBuffWindow.on('closed', () => {
+    automationBuffWindow = null;
+  });
 }
 
 function updateAutomationOverlayWindows(state) {
+  if (isShuttingDown) return;
   if (!automationHudWindow || !automationBuffWindow) return;
+  if (automationHudWindow.isDestroyed() || automationBuffWindow.isDestroyed()) return;
 
   const workArea = screen.getPrimaryDisplay().workArea;
   const overlay = state?.overlayState || {};
@@ -412,6 +429,17 @@ async function shutdownApp() {
   isShuttingDown = true;
 
   persistCurrentWindowPosition();
+  for (const window of [automationHudWindow, automationBuffWindow, overlayWindow]) {
+    if (!window || window.isDestroyed()) continue;
+    try {
+      window.destroy();
+    } catch (_) {
+      // Ignore window teardown failures during shutdown.
+    }
+  }
+  automationHudWindow = null;
+  automationBuffWindow = null;
+  overlayWindow = null;
   if (automationService) {
     try {
       await automationService.dispose();
@@ -420,7 +448,10 @@ async function shutdownApp() {
     }
   }
 
-  try { uIOhook.stop(); } catch (_) {}
+  cleanupOrphanAutomationHelpers();
+  releaseInputModifiersAtStartup();
+
+  try { globalShortcut.unregisterAll(); } catch (_) {}
   process.exit(0);
 }
 
@@ -442,7 +473,7 @@ function createOverlay() {
     resizable: true,
     movable: true,
     hasShadow: false,
-    focusable: true,
+    focusable: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -494,64 +525,65 @@ function setInteractiveMode(nextInteractive) {
   broadcastAltState();
 }
 
+async function handoffAutomationFocus(state) {
+  if (!automationService || !state?.activeProfile?.gameTarget?.requireForegroundForInput) {
+    return state;
+  }
+
+  const runtimeState = state.runtimeState || {};
+  const hasActiveAutomation = Boolean(
+    runtimeState.masterEnabled && (
+      runtimeState.leftClickerEnabled ||
+      runtimeState.rightClickerEnabled ||
+      runtimeState.f7Enabled ||
+      runtimeState.shiftHeldEnabled ||
+      runtimeState.ctrlHeldEnabled
+    )
+  );
+
+  if (!hasActiveAutomation) {
+    return state;
+  }
+
+  // Only hand off focus if the overlay is already non-interactive.
+  // If the user is browsing the overlay (isInteractive=true), don't steal their session.
+  if (!isInteractive) {
+    await automationService.focusTarget();
+  }
+  return automationService.getState();
+}
+
 function setupAltToggleTracking() {
-  uIOhook.on('keydown', event => {
-    void handleAutomationHotkeyEvent({ kind: 'key', keycode: event.keycode });
-
-    if (event.keycode === UiohookKey.Alt || event.keycode === UiohookKey.AltRight) {
-      altPressed = true;
-      altUsedAsModifier = false;
-      return;
-    }
-
-    if (altPressed) {
-      altUsedAsModifier = true;
-    }
-
-    const altComboActive = altPressed || event.altKey;
-    if (!altComboActive) {
-      return;
-    }
-
-    if (event.keycode === UiohookKey.C) {
+  const shortcuts = [
+    ['Alt+C', () => {
       sendDebugMessage('Alt+C detected');
       toggleCollapsed();
-      return;
-    }
-
-    if (event.keycode === UiohookKey.H) {
+    }],
+    ['Alt+H', () => {
       sendDebugMessage('Alt+H detected');
       toggleVisibility();
-      return;
-    }
-
-  });
-
-  uIOhook.on('keyup', event => {
-    releaseAutomationHotkeyEvent({ kind: 'key', keycode: event.keycode });
-
-    if (event.keycode !== UiohookKey.Alt && event.keycode !== UiohookKey.AltRight) {
-      return;
-    }
-
-    const shouldToggle = altPressed && !altUsedAsModifier;
-    altPressed = false;
-    altUsedAsModifier = false;
-
-    if (shouldToggle) {
+    }],
+    ['Alt+I', () => {
+      sendDebugMessage('Alt+I detected');
       setInteractiveMode(!isInteractive);
+    }],
+    ['F8', () => {
+      sendDebugMessage('F8 detected');
+      setInteractiveMode(!isInteractive);
+    }],
+    ['Alt+Q', () => {
+      sendDebugMessage('Alt+Q detected');
+      void shutdownApp();
+    }],
+  ];
+
+  for (const [accelerator, handler] of shortcuts) {
+    try {
+      globalShortcut.register(accelerator, handler);
+    } catch (error) {
+      sendDebugMessage(`Global shortcut registration failed for ${accelerator}: ${error.message}`);
     }
-  });
-
-  uIOhook.on('mousedown', event => {
-    void handleAutomationHotkeyEvent({ kind: 'mouse', button: event.button });
-  });
-
-  uIOhook.on('mouseup', event => {
-    releaseAutomationHotkeyEvent({ kind: 'mouse', button: event.button });
-  });
-
-  uIOhook.start();
+  }
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -663,9 +695,27 @@ function setupIPC() {
     automationService.applyProfile(automationService.profileStore.getActiveProfile());
     return imported;
   });
-  ipcMain.handle('automation:set-master-enabled', (_, enabled) => automationService?.setMasterEnabled(enabled) ?? null);
-  ipcMain.handle('automation:set-runtime-toggle', (_, { toggleId, enabled } = {}) => automationService?.setRuntimeToggle(toggleId, enabled) ?? null);
-  ipcMain.handle('automation:test-action', (_, { action, payload } = {}) => automationService?.testAction(action, payload ?? {}) ?? null);
+  ipcMain.handle('automation:set-master-enabled', async (_, enabled) => {
+    if (!automationService) return null;
+    const state = await automationService.setMasterEnabled(enabled);
+    return handoffAutomationFocus(state);
+  });
+  ipcMain.handle('automation:set-runtime-toggle', async (_, { toggleId, enabled } = {}) => {
+    if (!automationService) return null;
+    const state = await automationService.setRuntimeToggle(toggleId, enabled);
+    return handoffAutomationFocus(state);
+  });
+  ipcMain.handle('automation:test-action', async (_, { action, payload } = {}) => {
+    if (!automationService) return null;
+
+    const shouldHandoff = action !== 'releaseModifiers';
+    if (shouldHandoff) {
+      setInteractiveMode(false);
+      await automationService.focusTarget();
+    }
+
+    return automationService.testAction(action, payload ?? {});
+  });
   ipcMain.handle('automation:bind-hotkey', (_, { hotkeyId, binding } = {}) => automationService?.bindHotkey(hotkeyId, binding) ?? null);
   ipcMain.handle('automation:cancel-bind-hotkey', () => ({ ok: true }));
   ipcMain.handle('automation:restart-helper', () => automationService?.restartHelper() ?? null);
@@ -702,12 +752,36 @@ function setupIPC() {
 // ── App Lifecycle ─────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
+  cleanupOrphanAutomationHelpers();
+  releaseInputModifiersAtStartup();
   createOverlay();
   createAutomationOverlayWindows();
   setupAltToggleTracking();
-  await setupAutomation();
   setupIPC();
   broadcastAltState();
+  try {
+    await setupAutomation();
+  } catch (error) {
+    sendRendererEvent('automation:diagnostic-log', {
+      message: `automation startup failed: ${error.message}`,
+    });
+  }
+});
+
+app.on('second-instance', () => {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+
+  if (!overlayWindow.isVisible()) {
+    overlayWindow.show();
+  }
+
+  if (overlayWindow.isMinimized?.()) {
+    overlayWindow.restore();
+  }
+
+  overlayWindow.focus();
 });
 
 app.on('window-all-closed', () => {

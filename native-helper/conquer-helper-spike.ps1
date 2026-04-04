@@ -2,8 +2,10 @@ $ErrorActionPreference = 'Stop'
 
 Add-Type -TypeDefinition @"
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 public static class Win32Automation {
     private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
@@ -57,10 +59,49 @@ public static class Win32Automation {
     private static extern IntPtr GetForegroundWindow();
 
     [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetFocus(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetActiveWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SendMessage(IntPtr hWnd, UInt32 Msg, UIntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("user32.dll")]
+    private static extern void mouse_event(UInt32 dwFlags, UInt32 dx, UInt32 dy, UInt32 dwData, UIntPtr dwExtraInfo);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern UInt32 SendInput(UInt32 nInputs, INPUT[] pInputs, int cbSize);
@@ -72,6 +113,15 @@ public static class Win32Automation {
     private const UInt32 MOUSEEVENTF_RIGHTDOWN = 0x0008;
     private const UInt32 MOUSEEVENTF_RIGHTUP = 0x0010;
     private const UInt32 KEYEVENTF_KEYUP = 0x0002;
+    private const UInt16 VK_MENU = 0x12;
+    private const int SW_RESTORE = 9;
+    private const UInt32 WM_LBUTTONDOWN = 0x0201;
+    private const UInt32 WM_LBUTTONUP = 0x0202;
+    private const UInt32 WM_MOUSEMOVE = 0x0200;
+    private const UInt32 WM_RBUTTONDOWN = 0x0204;
+    private const UInt32 WM_RBUTTONUP = 0x0205;
+    private const UInt32 MK_LBUTTON = 0x0001;
+    private const UInt32 MK_RBUTTON = 0x0002;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT {
@@ -79,6 +129,12 @@ public static class Win32Automation {
         public Int32 Top;
         public Int32 Right;
         public Int32 Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT {
+        public Int32 X;
+        public Int32 Y;
     }
 
     public static IntPtr FindWindowByTitleContains(string pattern) {
@@ -119,6 +175,57 @@ public static class Win32Automation {
         return hWnd != IntPtr.Zero && hWnd == GetForegroundWindow();
     }
 
+    public static bool ActivateWindow(IntPtr hWnd) {
+        if (hWnd == IntPtr.Zero) {
+            return false;
+        }
+
+        if (IsIconic(hWnd)) {
+            ShowWindowAsync(hWnd, SW_RESTORE);
+        }
+
+        IntPtr foregroundWindow = GetForegroundWindow();
+        uint currentThread = GetCurrentThreadId();
+        uint foregroundThread = foregroundWindow == IntPtr.Zero ? currentThread : GetWindowThreadProcessId(foregroundWindow, IntPtr.Zero);
+        uint targetThread = GetWindowThreadProcessId(hWnd, IntPtr.Zero);
+        bool attachedForeground = false;
+        bool attachedTarget = false;
+
+        try {
+            if (foregroundThread != 0 && foregroundThread != currentThread) {
+                attachedForeground = AttachThreadInput(currentThread, foregroundThread, true);
+            }
+            if (targetThread != 0 && targetThread != currentThread && targetThread != foregroundThread) {
+                attachedTarget = AttachThreadInput(currentThread, targetThread, true);
+            }
+
+            BringWindowToTop(hWnd);
+            SetActiveWindow(hWnd);
+            SetFocus(hWnd);
+            SetForegroundWindow(hWnd);
+
+            if (IsForeground(hWnd)) {
+                return true;
+            }
+
+            KeyDown(VK_MENU);
+            KeyUp(VK_MENU);
+            BringWindowToTop(hWnd);
+            SetActiveWindow(hWnd);
+            SetFocus(hWnd);
+            SetForegroundWindow(hWnd);
+            return IsForeground(hWnd);
+        }
+        finally {
+            if (attachedTarget) {
+                AttachThreadInput(currentThread, targetThread, false);
+            }
+            if (attachedForeground) {
+                AttachThreadInput(currentThread, foregroundThread, false);
+            }
+        }
+    }
+
     public static RECT GetRect(IntPtr hWnd) {
         RECT rect;
         if (!GetWindowRect(hWnd, out rect)) {
@@ -131,12 +238,39 @@ public static class Win32Automation {
         return (GetAsyncKeyState(vKey) & 0x8000) != 0;
     }
 
-    public static void LeftClick() {
+    public static string LeftClick() {
         SendMouse(MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP);
+        return "send-input";
     }
 
-    public static void RightClick() {
+    public static string RightClick() {
         SendMouse(MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP);
+        return "send-input";
+    }
+
+    public static string LeftClickWindow(IntPtr hWnd) {
+        if (TrySendWindowClick(hWnd, false)) {
+            return "window-message";
+        }
+
+        return LeftClick();
+    }
+
+    public static string RightClickWindow(IntPtr hWnd) {
+        if (TrySendWindowClick(hWnd, true)) {
+            return "window-message";
+        }
+
+        return RightClick();
+    }
+
+    public static POINT GetCursorPosition() {
+        POINT point;
+        if (!GetCursorPos(out point)) {
+            return new POINT();
+        }
+
+        return point;
     }
 
     public static void KeyTap(UInt16 vk) {
@@ -165,17 +299,92 @@ public static class Win32Automation {
     }
 
     private static void SendMouse(UInt32 downFlag, UInt32 upFlag) {
-        INPUT[] inputs = new INPUT[] {
+        INPUT[] downInput = new INPUT[] {
             new INPUT {
                 type = INPUT_MOUSE,
                 U = new InputUnion { mi = new MOUSEINPUT { dx = 0, dy = 0, mouseData = 0, dwFlags = downFlag, time = 0, dwExtraInfo = IntPtr.Zero } }
-            },
+            }
+        };
+        INPUT[] upInput = new INPUT[] {
             new INPUT {
                 type = INPUT_MOUSE,
                 U = new InputUnion { mi = new MOUSEINPUT { dx = 0, dy = 0, mouseData = 0, dwFlags = upFlag, time = 0, dwExtraInfo = IntPtr.Zero } }
             }
         };
-        SendInput((UInt32)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+        SendInput((UInt32)downInput.Length, downInput, Marshal.SizeOf(typeof(INPUT)));
+        Thread.Sleep(8);
+        SendInput((UInt32)upInput.Length, upInput, Marshal.SizeOf(typeof(INPUT)));
+    }
+
+    private static void SendMouseCompat(UInt32 downFlag, UInt32 upFlag) {
+        mouse_event(downFlag, 0, 0, 0, UIntPtr.Zero);
+        mouse_event(upFlag, 0, 0, 0, UIntPtr.Zero);
+    }
+
+    private static bool TrySendWindowClick(IntPtr hWnd, bool rightButton) {
+        if (hWnd == IntPtr.Zero) {
+            return false;
+        }
+
+        POINT point;
+        if (!GetCursorPos(out point)) {
+            return false;
+        }
+
+        if (!ScreenToClient(hWnd, ref point)) {
+            return false;
+        }
+
+        IntPtr lParam = (IntPtr)(((point.Y & 0xFFFF) << 16) | (point.X & 0xFFFF));
+        UInt32 downMessage = rightButton ? WM_RBUTTONDOWN : WM_LBUTTONDOWN;
+        UInt32 upMessage = rightButton ? WM_RBUTTONUP : WM_LBUTTONUP;
+        UIntPtr buttonState = (UIntPtr)(rightButton ? MK_RBUTTON : MK_LBUTTON);
+
+        SendMessage(hWnd, WM_MOUSEMOVE, UIntPtr.Zero, lParam);
+        SendMessage(hWnd, downMessage, buttonState, lParam);
+        Thread.Sleep(8);
+        SendMessage(hWnd, upMessage, UIntPtr.Zero, lParam);
+        return true;
+    }
+}
+
+public sealed class StdinPump {
+    private readonly ConcurrentQueue<string> _queue = new ConcurrentQueue<string>();
+    private readonly Thread _thread;
+    private volatile bool _completed;
+    private volatile string _errorMessage = String.Empty;
+
+    public StdinPump() {
+        _thread = new Thread(ReadLoop);
+        _thread.IsBackground = true;
+        _thread.Start();
+    }
+
+    private void ReadLoop() {
+        try {
+            string line;
+            while ((line = Console.In.ReadLine()) != null) {
+                _queue.Enqueue(line);
+            }
+        }
+        catch (Exception ex) {
+            _errorMessage = ex.Message ?? String.Empty;
+        }
+        finally {
+            _completed = true;
+        }
+    }
+
+    public bool TryDequeue(out string line) {
+        return _queue.TryDequeue(out line);
+    }
+
+    public bool IsCompleted {
+        get { return _completed; }
+    }
+
+    public string ErrorMessage {
+        get { return _errorMessage ?? String.Empty; }
     }
 }
 "@
@@ -183,7 +392,7 @@ public static class Win32Automation {
 $script:Config = @{
     heartbeatIntervalMs = 10000
     target = @{
-        windowTitlePattern = 'Shinsei - ClassicConquer'
+        windowTitlePattern = 'ClassicConquer'
         requireForegroundForInput = $true
     }
     runtime = @{
@@ -198,17 +407,24 @@ $script:Config = @{
         shiftHeldEnabled = $false
         ctrlHeldEnabled = $false
         safeStopReleasesModifiers = $true
+        clickMode = 'send-input'
     }
     runtimeApplied = @{
         shiftDown = $false
         ctrlDown = $false
-        lastLeftAt = 0L
-        lastRightAt = 0L
-        lastF7At = 0L
+        lastLeftAt = 0
+        lastRightAt = 0
+        lastF7At = 0
         nextLeftOffset = 0
         nextRightOffset = 0
         nextF7Offset = 0
-        lastTargetEmitAt = 0L
+        lastTargetEmitAt = 0
+        lastActivityAt = 0
+        lastRuntimeBlockReason = ''
+        lastLeftTraceAt = 0
+        lastRightTraceAt = 0
+        lastF7TraceAt = 0
+        lastFocusAttemptAt = 0
     }
     hotkeys = @{}
     hotkeyPressed = @{}
@@ -224,8 +440,14 @@ function Write-Message {
     $message = [ordered]@{ type = $Type }
     if ($null -ne $RequestId -and -not [string]::IsNullOrEmpty([string]$RequestId)) { $message.requestId = [string]$RequestId }
     if ($null -ne $Payload) { $message.payload = $Payload }
-    [Console]::Out.WriteLine(($message | ConvertTo-Json -Compress -Depth 10))
-    [Console]::Out.Flush()
+    try {
+        [Console]::Out.WriteLine(($message | ConvertTo-Json -Compress -Depth 10))
+        [Console]::Out.Flush()
+    } catch {
+        if ($Type -eq 'hello' -or $Type -eq 'error' -or $Type -eq 'result') {
+            throw
+        }
+    }
 }
 
 function Write-ErrorMessage {
@@ -246,9 +468,75 @@ function Write-Result {
     Write-Message -Type 'result' -Payload $Payload -RequestId $RequestId
 }
 
+function Write-LogMessage {
+    param([string]$Message, [object]$Details = $null)
+
+    $payload = [ordered]@{ message = $Message }
+    if ($null -ne $Details) {
+        $payload.details = $Details
+    }
+
+    Write-Message -Type 'log' -Payload $payload
+}
+
+function Resolve-TargetSearchPatterns {
+    $rawPattern = [string]$script:Config.target.windowTitlePattern
+    $patterns = New-Object System.Collections.Generic.List[string]
+
+    function Add-TargetPattern {
+        param([string]$Value)
+
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            return
+        }
+
+        $candidate = $Value.Trim()
+        if ($candidate.Length -lt 3) {
+            return
+        }
+
+        if (-not $patterns.Contains($candidate)) {
+            $patterns.Add($candidate)
+        }
+    }
+
+    Add-TargetPattern $rawPattern
+
+    $trimmed = $rawPattern.Trim()
+    $withoutBrackets = $trimmed.Trim('[', ']')
+    Add-TargetPattern $withoutBrackets
+
+    foreach ($candidate in @($trimmed, $withoutBrackets)) {
+        if ($candidate -match '\s-\s') {
+            Add-TargetPattern (($candidate -split '\s-\s', 2)[1])
+        }
+    }
+
+    Add-TargetPattern 'ClassicConquer'
+    return ,$patterns.ToArray()
+}
+
+function Resolve-TargetWindow {
+    foreach ($pattern in (Resolve-TargetSearchPatterns)) {
+        $handle = [Win32Automation]::FindWindowByTitleContains($pattern)
+        if ($handle -ne [IntPtr]::Zero) {
+            return [ordered]@{
+                handle = $handle
+                matchedPattern = $pattern
+            }
+        }
+    }
+
+    return [ordered]@{
+        handle = [IntPtr]::Zero
+        matchedPattern = ''
+    }
+}
+
 function Get-TargetStatus {
-    $pattern = [string]$script:Config.target.windowTitlePattern
-    $handle = [Win32Automation]::FindWindowByTitleContains($pattern)
+    $configuredPattern = [string]$script:Config.target.windowTitlePattern
+    $targetWindow = Resolve-TargetWindow
+    $handle = $targetWindow.handle
     $attached = $handle -ne [IntPtr]::Zero
     $title = if ($attached) { [Win32Automation]::GetWindowTitle($handle) } else { '' }
     $isForeground = if ($attached) { [Win32Automation]::IsForeground($handle) } else { $false }
@@ -258,7 +546,8 @@ function Get-TargetStatus {
         attached = $attached
         isForeground = $isForeground
         title = $title
-        windowTitlePattern = $pattern
+        windowTitlePattern = $configuredPattern
+        matchedPattern = if ($attached) { [string]$targetWindow.matchedPattern } else { '' }
         rect = if ($attached) { [ordered]@{ x = $rect.Left; y = $rect.Top; width = ($rect.Right - $rect.Left); height = ($rect.Bottom - $rect.Top) } } else { $null }
     }
 }
@@ -274,15 +563,181 @@ function Assert-InputAllowed {
     return $status
 }
 
+function Focus-TargetWindow {
+    $targetWindow = Resolve-TargetWindow
+    $handle = $targetWindow.handle
+    if ($handle -eq [IntPtr]::Zero) {
+        $status = Get-TargetStatus
+        return [ordered]@{
+            ok = $false
+            activated = $false
+            target = $status
+        }
+    }
+
+    $activated = [Win32Automation]::ActivateWindow($handle)
+    Start-Sleep -Milliseconds 50
+    $status = Get-TargetStatus
+
+    return [ordered]@{
+        ok = [bool]$status.attached
+        activated = [bool]$activated
+        target = $status
+    }
+}
+
+function Get-CursorSnapshot {
+    $point = [Win32Automation]::GetCursorPosition()
+    return [ordered]@{
+        x = [int]$point.X
+        y = [int]$point.Y
+    }
+}
+
+function Invoke-LeftClickAction {
+    param([string]$Reason = 'runtime')
+
+    $targetWindow = Resolve-TargetWindow
+    $cursor = Get-CursorSnapshot
+    $attached = $targetWindow.handle -ne [IntPtr]::Zero
+    $delivery = 'mouse-event'
+    $title = ''
+    $isForeground = $false
+
+    if ($attached) {
+        $title = [Win32Automation]::GetWindowTitle($targetWindow.handle)
+        $isForeground = [Win32Automation]::IsForeground($targetWindow.handle)
+        if ([string]$script:Config.runtime.clickMode -eq 'window-message') {
+            $delivery = [string][Win32Automation]::LeftClickWindow($targetWindow.handle)
+        } else {
+            $delivery = [string][Win32Automation]::LeftClick()
+        }
+    } else {
+        $delivery = [string][Win32Automation]::LeftClick()
+    }
+
+    return [ordered]@{
+        action = 'leftClick'
+        reason = $Reason
+        delivery = $delivery
+        attached = $attached
+        matchedPattern = if ($attached) { [string]$targetWindow.matchedPattern } else { '' }
+        title = $title
+        isForeground = $isForeground
+        cursor = $cursor
+    }
+}
+
+function Invoke-RightClickAction {
+    param([string]$Reason = 'runtime')
+
+    $targetWindow = Resolve-TargetWindow
+    $cursor = Get-CursorSnapshot
+    $attached = $targetWindow.handle -ne [IntPtr]::Zero
+    $delivery = 'mouse-event'
+    $title = ''
+    $isForeground = $false
+
+    if ($attached) {
+        $title = [Win32Automation]::GetWindowTitle($targetWindow.handle)
+        $isForeground = [Win32Automation]::IsForeground($targetWindow.handle)
+        if ([string]$script:Config.runtime.clickMode -eq 'window-message') {
+            $delivery = [string][Win32Automation]::RightClickWindow($targetWindow.handle)
+        } else {
+            $delivery = [string][Win32Automation]::RightClick()
+        }
+    } else {
+        $delivery = [string][Win32Automation]::RightClick()
+    }
+
+    return [ordered]@{
+        action = 'rightClick'
+        reason = $Reason
+        delivery = $delivery
+        attached = $attached
+        matchedPattern = if ($attached) { [string]$targetWindow.matchedPattern } else { '' }
+        title = $title
+        isForeground = $isForeground
+        cursor = $cursor
+    }
+}
+
 function Release-Modifiers {
-    [Win32Automation]::KeyUp(0x10)
-    [Win32Automation]::KeyUp(0x11)
+    foreach ($vk in 0x10, 0x11, 0x12, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5) {
+        [Win32Automation]::KeyUp([uint16]$vk)
+    }
     $script:Config.runtimeApplied.shiftDown = $false
     $script:Config.runtimeApplied.ctrlDown = $false
 }
 
 function Get-TickMs {
-    return [Environment]::TickCount64
+    return [Environment]::TickCount
+}
+
+function Mark-HelperActivity {
+    $script:Config.runtimeApplied.lastActivityAt = Get-TickMs
+}
+
+function Get-HelperIdleTimeoutMs {
+    $heartbeatIntervalMs = [Math]::Max(1000, [int]$script:Config.heartbeatIntervalMs)
+    return [Math]::Max(5000, $heartbeatIntervalMs * 3)
+}
+
+function Test-HelperTimedOut {
+    $lastActivityAt = [int64]$script:Config.runtimeApplied.lastActivityAt
+    if ($lastActivityAt -le 0) {
+        return $false
+    }
+
+    return ((Get-TickMs) - $lastActivityAt) -ge (Get-HelperIdleTimeoutMs)
+}
+
+function Test-RuntimeHasRequestedInput {
+    $runtime = $script:Config.runtime
+    return [bool]($runtime.leftClickerEnabled -or $runtime.rightClickerEnabled -or $runtime.f7Enabled -or $runtime.shiftHeldEnabled -or $runtime.ctrlHeldEnabled)
+}
+
+function Set-RuntimeBlockReason {
+    param([string]$Reason, [object]$TargetStatus = $null)
+
+    $previous = [string]$script:Config.runtimeApplied.lastRuntimeBlockReason
+    if ($previous -eq $Reason) {
+        return
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Reason)) {
+        if (-not [string]::IsNullOrWhiteSpace($previous)) {
+            Write-LogMessage -Message 'Runtime resumed.' -Details @{ target = $TargetStatus }
+        }
+    } else {
+        Write-LogMessage -Message "Runtime paused: $Reason." -Details @{ reason = $Reason; target = $TargetStatus }
+    }
+
+    $script:Config.runtimeApplied.lastRuntimeBlockReason = $Reason
+}
+
+function Test-TraceWindow {
+    param([string]$FieldName, [int64]$Now, [int]$IntervalMs = 1000)
+
+    $lastAt = [int64]$script:Config.runtimeApplied[$FieldName]
+    if (($Now - $lastAt) -lt $IntervalMs) {
+        return $false
+    }
+
+    $script:Config.runtimeApplied[$FieldName] = $Now
+    return $true
+}
+
+function Test-RuntimeShouldAttemptFocus {
+    param([int64]$Now)
+
+    $lastAt = [int64]$script:Config.runtimeApplied.lastFocusAttemptAt
+    if (($Now - $lastAt) -lt 350) {
+        return $false
+    }
+
+    $script:Config.runtimeApplied.lastFocusAttemptAt = $Now
+    return $true
 }
 
 function Get-JitterOffset {
@@ -421,16 +876,8 @@ function Poll-Hotkeys {
 
 function Invoke-RuntimeTick {
     $runtime = $script:Config.runtime
-    if (-not $runtime.masterEnabled) {
-        if ($runtime.safeStopReleasesModifiers) {
-            Release-Modifiers
-        } else {
-            Apply-ModifierState
-        }
-        return
-    }
-
     $targetStatus = Get-TargetStatus
+    $now = Get-TickMs
     if ((Get-TickMs) - $script:Config.runtimeApplied.lastTargetEmitAt -ge 750) {
         $script:Config.runtimeApplied.lastTargetEmitAt = Get-TickMs
         Write-Message -Type 'target-status' -Payload $targetStatus
@@ -438,34 +885,80 @@ function Invoke-RuntimeTick {
 
     Poll-Hotkeys -TargetStatus $targetStatus
 
+    if (-not $runtime.masterEnabled) {
+        $shouldRelease = $runtime.safeStopReleasesModifiers -and (
+            $script:Config.runtimeApplied.shiftDown -or
+            $script:Config.runtimeApplied.ctrlDown -or
+            ((Test-RuntimeHasRequestedInput) -and [string]$script:Config.runtimeApplied.lastRuntimeBlockReason -ne 'master-disabled')
+        )
+        if (Test-RuntimeHasRequestedInput) {
+            Set-RuntimeBlockReason -Reason 'master-disabled' -TargetStatus $targetStatus
+        } else {
+            Set-RuntimeBlockReason -Reason '' -TargetStatus $targetStatus
+        }
+        if ($shouldRelease) {
+            Release-Modifiers
+        }
+        return
+    }
+
     if (-not $targetStatus.attached) {
-        if ($runtime.safeStopReleasesModifiers) { Release-Modifiers }
+        $shouldRelease = $runtime.safeStopReleasesModifiers -and (
+            $script:Config.runtimeApplied.shiftDown -or
+            $script:Config.runtimeApplied.ctrlDown -or
+            [string]$script:Config.runtimeApplied.lastRuntimeBlockReason -ne 'target-not-found'
+        )
+        Set-RuntimeBlockReason -Reason 'target-not-found' -TargetStatus $targetStatus
+        if ($shouldRelease) { Release-Modifiers }
         return
     }
 
     if ($script:Config.target.requireForegroundForInput -and -not $targetStatus.isForeground) {
-        if ($runtime.safeStopReleasesModifiers) { Release-Modifiers }
-        return
+        if (Test-RuntimeHasRequestedInput -and Test-RuntimeShouldAttemptFocus -Now $now) {
+            $focusResult = Focus-TargetWindow
+            $targetStatus = $focusResult.target
+            Write-Message -Type 'target-status' -Payload $targetStatus
+            Write-LogMessage -Message "Runtime attempted to focus target while active input was waiting." -Details @{ target = $targetStatus; activated = [bool]$focusResult.activated }
+        }
+
+        if ($targetStatus.isForeground) {
+            Set-RuntimeBlockReason -Reason '' -TargetStatus $targetStatus
+        } else {
+        $shouldRelease = $runtime.safeStopReleasesModifiers -and (
+            $script:Config.runtimeApplied.shiftDown -or
+            $script:Config.runtimeApplied.ctrlDown -or
+            [string]$script:Config.runtimeApplied.lastRuntimeBlockReason -ne 'target-background'
+        )
+        Set-RuntimeBlockReason -Reason 'target-background' -TargetStatus $targetStatus
+            if ($shouldRelease) { Release-Modifiers }
+            return
+        }
     }
 
+    Set-RuntimeBlockReason -Reason '' -TargetStatus $targetStatus
     Apply-ModifierState
 
-    $now = Get-TickMs
     if ($runtime.leftClickerEnabled) {
         $leftInterval = [Math]::Max(1, [int]$runtime.leftClickIntervalMs + [int]$script:Config.runtimeApplied.nextLeftOffset)
         if ($now - $script:Config.runtimeApplied.lastLeftAt -ge $leftInterval) {
-            [Win32Automation]::LeftClick()
+            $leftResult = Invoke-LeftClickAction -Reason 'runtime'
             $script:Config.runtimeApplied.lastLeftAt = $now
             $script:Config.runtimeApplied.nextLeftOffset = Get-JitterOffset -BaseIntervalMs ([int]$runtime.leftClickIntervalMs)
+            if (Test-TraceWindow -FieldName 'lastLeftTraceAt' -Now $now) {
+                Write-LogMessage -Message "Runtime left click attempted via $($leftResult.delivery)." -Details $leftResult
+            }
         }
     }
 
     if ($runtime.rightClickerEnabled) {
         $rightInterval = [Math]::Max(1, [int]$runtime.rightClickIntervalMs + [int]$script:Config.runtimeApplied.nextRightOffset)
         if ($now - $script:Config.runtimeApplied.lastRightAt -ge $rightInterval) {
-            [Win32Automation]::RightClick()
+            $rightResult = Invoke-RightClickAction -Reason 'runtime'
             $script:Config.runtimeApplied.lastRightAt = $now
             $script:Config.runtimeApplied.nextRightOffset = Get-JitterOffset -BaseIntervalMs ([int]$runtime.rightClickIntervalMs)
+            if (Test-TraceWindow -FieldName 'lastRightTraceAt' -Now $now) {
+                Write-LogMessage -Message "Runtime right click attempted via $($rightResult.delivery)." -Details $rightResult
+            }
         }
     }
 
@@ -475,6 +968,9 @@ function Invoke-RuntimeTick {
             [Win32Automation]::KeyTap(0x76)
             $script:Config.runtimeApplied.lastF7At = $now
             $script:Config.runtimeApplied.nextF7Offset = Get-JitterOffset -BaseIntervalMs ([int]$runtime.f7IntervalMs)
+            if (Test-TraceWindow -FieldName 'lastF7TraceAt' -Now $now) {
+                Write-LogMessage -Message 'Runtime F7 press attempted.' -Details @{ action = 'f7Press'; reason = 'runtime'; target = $targetStatus }
+            }
         }
     }
 }
@@ -482,16 +978,64 @@ function Invoke-RuntimeTick {
 function Invoke-TestAction {
     param([string]$Action)
 
-    $status = Assert-InputAllowed
+    $prepared = if ($Action -eq 'releaseModifiers') {
+        [ordered]@{
+            target = Get-TargetStatus
+            focusAttempted = $false
+            focusResult = $null
+        }
+    } else {
+        $status = Get-TargetStatus
+        if (-not $status.attached) {
+            throw [System.InvalidOperationException]::new('No matching target window was found.')
+        }
+
+        $focusAttempted = $false
+        $focusResult = $null
+        if ($script:Config.target.requireForegroundForInput -and -not $status.isForeground) {
+            $focusAttempted = $true
+            Write-LogMessage -Message "Test $Action requested while target was in the background; attempting focus." -Details @{ action = $Action; target = $status }
+            $focusResult = Focus-TargetWindow
+            $status = $focusResult.target
+            Write-Message -Type 'target-status' -Payload $status
+        }
+
+        if ($script:Config.target.requireForegroundForInput -and -not $status.isForeground) {
+            throw [System.InvalidOperationException]::new('Target window is not in the foreground after focus attempt.')
+        }
+
+        [ordered]@{
+            target = $status
+            focusAttempted = $focusAttempted
+            focusResult = $focusResult
+        }
+    }
+
+    $status = $prepared.target
+    $details = $null
     switch ($Action) {
-        'leftClick' { [Win32Automation]::LeftClick() }
-        'rightClick' { [Win32Automation]::RightClick() }
-        'f7Press' { [Win32Automation]::KeyTap(0x76) }
+        'leftClick' {
+            $details = Invoke-LeftClickAction -Reason 'test'
+            Write-LogMessage -Message "Test left click attempted via $($details.delivery)." -Details $details
+        }
+        'rightClick' {
+            $details = Invoke-RightClickAction -Reason 'test'
+            Write-LogMessage -Message "Test right click attempted via $($details.delivery)." -Details $details
+        }
+        'f7Press' {
+            [Win32Automation]::KeyTap(0x76)
+            $details = [ordered]@{ action = 'f7Press'; reason = 'test'; target = $status }
+            Write-LogMessage -Message 'Test F7 press attempted.' -Details $details
+        }
         'shiftDown' { [Win32Automation]::KeyDown(0x10) }
         'shiftUp' { [Win32Automation]::KeyUp(0x10) }
         'ctrlDown' { [Win32Automation]::KeyDown(0x11) }
         'ctrlUp' { [Win32Automation]::KeyUp(0x11) }
-        'releaseModifiers' { Release-Modifiers }
+        'releaseModifiers' {
+            Release-Modifiers
+            $details = [ordered]@{ action = 'releaseModifiers'; reason = 'test' }
+            Write-LogMessage -Message 'Test modifier release attempted.' -Details $details
+        }
         default { throw [System.ArgumentException]::new("Unknown test action: $Action") }
     }
 
@@ -499,14 +1043,21 @@ function Invoke-TestAction {
         ok = $true
         action = $Action
         target = $status
+        focusAttempted = [bool]$prepared.focusAttempted
+        focusResult = $prepared.focusResult
+        details = $details
     }
 }
+
+Release-Modifiers
 
 Write-Message -Type 'hello' -Payload @{
     protocolVersion = 1
     capabilities = @(
         'targetLookup',
+        'targetTitleFallback',
         'foregroundCheck',
+        'focusTarget',
         'leftClick',
         'rightClick',
         'f7Press',
@@ -516,15 +1067,29 @@ Write-Message -Type 'hello' -Payload @{
     )
 }
 
+Mark-HelperActivity
+
 try {
+    $stdinPump = [StdinPump]::new()
+
     while ($true) {
-        if ([Console]::In.Peek() -lt 0) {
+        $line = $null
+        if (-not $stdinPump.TryDequeue([ref]$line)) {
+            if ($stdinPump.IsCompleted) {
+                if (-not [string]::IsNullOrWhiteSpace($stdinPump.ErrorMessage)) {
+                    Write-Message -Type 'log' -Payload @{ message = "Helper stdin pump completed with error: $($stdinPump.ErrorMessage)" }
+                }
+                break
+            }
+            if (Test-HelperTimedOut) {
+                Write-Message -Type 'log' -Payload @{ message = 'Helper idle timeout reached; shutting down orphaned helper.' }
+                break
+            }
             Invoke-RuntimeTick
             Start-Sleep -Milliseconds 10
             continue
         }
 
-        $line = [Console]::In.ReadLine()
         if ($null -eq $line) { break }
         if ([string]::IsNullOrWhiteSpace($line)) {
             continue
@@ -532,6 +1097,7 @@ try {
 
         try {
             $message = $line | ConvertFrom-Json
+            Mark-HelperActivity
             $type = [string]$message.type
             $requestId = if ($null -ne $message.requestId) { [string]$message.requestId } else { $null }
 
@@ -548,12 +1114,17 @@ try {
                 }
                 'set-target' {
                     $script:Config.target = @{
-                        windowTitlePattern = if ($message.payload.windowTitlePattern) { [string]$message.payload.windowTitlePattern } else { 'Shinsei - ClassicConquer' }
+                        windowTitlePattern = if ($message.payload.windowTitlePattern) { [string]$message.payload.windowTitlePattern } else { 'ClassicConquer' }
                         requireForegroundForInput = if ($null -ne $message.payload.requireForegroundForInput) { [bool]$message.payload.requireForegroundForInput } else { $true }
                     }
                     $status = Get-TargetStatus
                     Write-Message -Type 'target-status' -Payload $status
                     Write-Result -RequestId $requestId -Payload $status
+                }
+                'focus-target' {
+                    $result = Focus-TargetWindow
+                    Write-Message -Type 'target-status' -Payload $result.target
+                    Write-Result -RequestId $requestId -Payload $result
                 }
                 'set-runtime-config' {
                     if ($null -ne $message.payload.runtime) {
@@ -563,6 +1134,7 @@ try {
                         $script:Config.runtime.f7IntervalMs = if ($runtime.f7IntervalMs) { [int]$runtime.f7IntervalMs } else { $script:Config.runtime.f7IntervalMs }
                         $script:Config.runtime.jitterPercent = if ($null -ne $runtime.jitterPercent) { [int]$runtime.jitterPercent } else { $script:Config.runtime.jitterPercent }
                         $script:Config.runtime.safeStopReleasesModifiers = if ($null -ne $runtime.safeStopReleasesModifiers) { [bool]$runtime.safeStopReleasesModifiers } else { $script:Config.runtime.safeStopReleasesModifiers }
+                        $script:Config.runtime.clickMode = if ($runtime.clickMode) { [string]$runtime.clickMode } else { $script:Config.runtime.clickMode }
                     }
                     Reset-RuntimeSchedule
                     Write-Result -RequestId $requestId -Payload @{ ok = $true }
@@ -584,6 +1156,7 @@ try {
                     }
                     Reset-RuntimeSchedule
                     $snapshot = Get-RuntimeSnapshot
+                    Write-LogMessage -Message 'Runtime toggles applied.' -Details @{ runtime = $snapshot.runtime; target = $snapshot.target }
                     Write-Message -Type 'runtime-applied' -Payload $snapshot
                     Write-Result -RequestId $requestId -Payload $snapshot
                 }

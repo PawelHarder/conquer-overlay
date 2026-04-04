@@ -33,11 +33,80 @@ class ProfileStore {
     try {
       const raw = fs.readFileSync(this.filePath, 'utf8');
       this.document = normalizeDocument(JSON.parse(raw));
+      let needsSave = false;
+      if (this.migrateDefaultHotkeys()) needsSave = true;
+      if (this.migrateReenableHotkeys()) needsSave = true;
+      if (needsSave) this.save();
     } catch (_) {
       this.document = createDefaultDocument();
       this.save();
     }
     return this.getDocument();
+  }
+
+  migrateDefaultHotkeys() {
+    const document = this.document;
+    if (!document || !Array.isArray(document.profiles)) {
+      return false;
+    }
+
+    let changed = false;
+    for (const profile of document.profiles) {
+      const diagnostics = profile.diagnostics || {};
+      if (diagnostics.hotkeysMigrated === true) {
+        continue;
+      }
+
+      const hotkeys = profile.hotkeys || {};
+      for (const hotkey of Object.values(hotkeys)) {
+        if (!hotkey || typeof hotkey !== 'object') {
+          continue;
+        }
+
+        hotkey.enabled = false;
+      }
+
+      profile.diagnostics = {
+        ...diagnostics,
+        hotkeysMigrated: true,
+      };
+      profile.updatedAt = new Date().toISOString();
+      changed = true;
+    }
+
+    return changed;
+  }
+
+  migrateReenableHotkeys() {
+    const document = this.document;
+    if (!document || !Array.isArray(document.profiles)) {
+      return false;
+    }
+
+    let changed = false;
+    for (const profile of document.profiles) {
+      const diagnostics = profile.diagnostics || {};
+      if (diagnostics.hotkeysReenabled === true) {
+        continue;
+      }
+
+      const hotkeys = profile.hotkeys || {};
+      for (const hotkey of Object.values(hotkeys)) {
+        if (!hotkey || typeof hotkey !== 'object') {
+          continue;
+        }
+        hotkey.enabled = Boolean(hotkey.binding);
+      }
+
+      profile.diagnostics = {
+        ...diagnostics,
+        hotkeysReenabled: true,
+      };
+      profile.updatedAt = new Date().toISOString();
+      changed = true;
+    }
+
+    return changed;
   }
 
   save() {

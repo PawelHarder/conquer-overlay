@@ -20,6 +20,11 @@ class AutomationHelperClient extends EventEmitter {
     this.nextRequestId = 1;
     this.heartbeatIntervalMs = 10000;
     this.heartbeatTimer = null;
+    this.stopping = false;
+    this.readyPromise = null;
+    this.resolveReady = null;
+    this.rejectReady = null;
+    this.activeChildToken = 0;
     this.status = {
       lifecycle: 'idle',
       isRunning: false,
@@ -37,7 +42,10 @@ class AutomationHelperClient extends EventEmitter {
 
   async start() {
     if (this.child) {
-      return this.getStatus();
+      if (this.status.lifecycle === 'ready') {
+        return this.getStatus();
+      }
+      return this.waitForReady();
     }
 
     if (!this.helperPath) {
@@ -58,6 +66,9 @@ class AutomationHelperClient extends EventEmitter {
 
     const command = this.launchCommand || this.helperPath;
     const args = this.launchCommand ? this.launchArgs : this.helperArgs;
+    this.stopping = false;
+    this.resetReadyPromise();
+    const childToken = ++this.activeChildToken;
 
     this.child = spawn(command, args, {
       cwd: this.cwd,
@@ -66,12 +77,16 @@ class AutomationHelperClient extends EventEmitter {
     });
 
     this.stdoutBuffer = '';
-    this.child.stdout.setEncoding('utf8');
-    this.child.stdout.on('data', chunk => this.handleStdout(chunk));
-    this.child.stderr.setEncoding('utf8');
-    this.child.stderr.on('data', chunk => this.logger('helper-stderr', chunk.trim()));
-    this.child.once('exit', (code, signal) => this.handleExit(code, signal));
-    this.child.once('error', error => this.handleChildError(error));
+    const child = this.child;
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', chunk => this.handleStdout(childToken, chunk));
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', chunk => {
+      if (childToken !== this.activeChildToken) return;
+      this.logger('helper-stderr', chunk.trim());
+    });
+    child.once('exit', (code, signal) => this.handleExit(childToken, code, signal));
+    child.once('error', error => this.handleChildError(childToken, error));
 
     this.updateStatus({
       lifecycle: 'starting',
@@ -80,7 +95,7 @@ class AutomationHelperClient extends EventEmitter {
       lastError: null,
     });
 
-    return this.getStatus();
+    return this.waitForReady();
   }
 
   async restart() {
@@ -91,9 +106,12 @@ class AutomationHelperClient extends EventEmitter {
   async stop() {
     this.clearHeartbeat();
     if (!this.child) {
+      this.resetReadyPromise();
       this.updateStatus({ lifecycle: 'stopped', isRunning: false, pid: null });
       return this.getStatus();
     }
+
+    this.stopping = true;
 
     try {
       await this.sendRequest('shutdown', {}, 1500);
@@ -109,9 +127,43 @@ class AutomationHelperClient extends EventEmitter {
       // Process already gone.
     }
 
+    this.resetReadyPromise();
     this.failAllPending(new Error('Automation helper stopped'));
     this.updateStatus({ lifecycle: 'stopped', isRunning: false, pid: null });
     return this.getStatus();
+  }
+
+  waitForReady(timeoutMs = 15000) {
+    if (this.status.lifecycle === 'ready') {
+      return Promise.resolve(this.getStatus());
+    }
+
+    if (!this.readyPromise) {
+      this.resetReadyPromise();
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(this.createError('AUTOMATION_HELPER_START_TIMEOUT', 'Automation helper did not become ready in time.'));
+      }, timeoutMs);
+
+      this.readyPromise
+        .then(status => {
+          clearTimeout(timeout);
+          resolve(status);
+        })
+        .catch(error => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
+  }
+
+  resetReadyPromise() {
+    this.readyPromise = new Promise((resolve, reject) => {
+      this.resolveReady = resolve;
+      this.rejectReady = reject;
+    });
   }
 
   send(type, payload = {}) {
@@ -143,7 +195,10 @@ class AutomationHelperClient extends EventEmitter {
     });
   }
 
-  handleStdout(chunk) {
+  handleStdout(childToken, chunk) {
+    if (childToken !== this.activeChildToken) {
+      return;
+    }
     this.stdoutBuffer += chunk;
     let newlineIndex = this.stdoutBuffer.indexOf('\n');
     while (newlineIndex !== -1) {
@@ -173,6 +228,9 @@ class AutomationHelperClient extends EventEmitter {
         lastError: null,
       });
       this.startHeartbeat();
+      this.resolveReady?.(this.getStatus());
+      this.resolveReady = null;
+      this.rejectReady = null;
     }
 
     if (message.type === 'heartbeat') {
@@ -193,7 +251,16 @@ class AutomationHelperClient extends EventEmitter {
     this.emit('message', message);
   }
 
-  handleChildError(error) {
+  handleChildError(childToken, error) {
+    if (childToken !== this.activeChildToken) {
+      return;
+    }
+    if (this.stopping) {
+      return;
+    }
+    this.rejectReady?.(error);
+    this.resolveReady = null;
+    this.rejectReady = null;
     this.updateStatus({
       lifecycle: 'error',
       isRunning: false,
@@ -203,16 +270,26 @@ class AutomationHelperClient extends EventEmitter {
     this.emit('message', { type: 'error', payload: { code: 'AUTOMATION_HELPER_SPAWN_FAILED', message: error.message } });
   }
 
-  handleExit(code, signal) {
+  handleExit(childToken, code, signal) {
+    if (childToken !== this.activeChildToken) {
+      return;
+    }
     this.clearHeartbeat();
     this.child = null;
+    const expectedStop = this.stopping;
+    this.stopping = false;
+    if (!expectedStop) {
+      this.rejectReady?.(this.createError('AUTOMATION_HELPER_EXITED', `Automation helper exited (${code ?? 'null'} / ${signal ?? 'null'})`));
+    }
+    this.resolveReady = null;
+    this.rejectReady = null;
     this.failAllPending(this.createError('AUTOMATION_HELPER_EXITED', `Automation helper exited (${code ?? 'null'} / ${signal ?? 'null'})`));
     this.updateStatus({
       lifecycle: 'stopped',
       isRunning: false,
       pid: null,
       capabilities: [],
-      lastError: code === 0 ? null : { code: 'AUTOMATION_HELPER_EXITED', message: `Automation helper exited (${code ?? 'null'} / ${signal ?? 'null'})` },
+      lastError: (expectedStop || code === 0) ? null : { code: 'AUTOMATION_HELPER_EXITED', message: `Automation helper exited (${code ?? 'null'} / ${signal ?? 'null'})` },
     });
   }
 

@@ -25,6 +25,8 @@ const state = {
   minimapPinned:    null,
   automationState:  null,
   automationLog:    [],
+  automationHelperLifecycle: '',
+  automationHelperErrorCode: '',
 };
 
 const MINIMAP_POPUP_WIDTH = 336;
@@ -179,6 +181,7 @@ const dom = {
   automationTestRight: $('automation-test-right'),
   automationTestF7:    $('automation-test-f7'),
   automationTestRelease:$('automation-test-release'),
+  automationCopyLog:   $('automation-copy-log'),
   automationLog:       $('automation-log'),
   automationBuffList:  $('automation-buff-list'),
 
@@ -218,10 +221,92 @@ function escHtml(str) {
 function pushAutomationLog(message) {
   const text = typeof message === 'string' ? message : JSON.stringify(message);
   state.automationLog.unshift(text);
-  state.automationLog = state.automationLog.slice(0, 10);
+  state.automationLog = state.automationLog.slice(0, 25);
   if (dom.automationLog) {
     dom.automationLog.textContent = state.automationLog.join('\n');
   }
+}
+
+function formatAutomationTargetSummary(target) {
+  if (!target) return '';
+  const parts = [];
+  if (typeof target.isForeground === 'boolean') {
+    parts.push(`foreground=${target.isForeground ? 'yes' : 'no'}`);
+  }
+  if (target.matchedPattern) {
+    parts.push(`pattern=${target.matchedPattern}`);
+  }
+  if (target.title) {
+    parts.push(`title=${target.title}`);
+  }
+  return parts.join(' | ');
+}
+
+function formatAutomationDetailSummary(details) {
+  if (!details || typeof details !== 'object') return '';
+  const parts = [];
+  if (details.runtime && typeof details.runtime === 'object') {
+    const runtime = details.runtime;
+    const flags = [
+      `master=${runtime.masterEnabled ? 'on' : 'off'}`,
+      `left=${runtime.leftClickerEnabled ? 'on' : 'off'}`,
+      `right=${runtime.rightClickerEnabled ? 'on' : 'off'}`,
+      `f7=${runtime.f7Enabled ? 'on' : 'off'}`,
+      `shift=${runtime.shiftHeldEnabled ? 'on' : 'off'}`,
+      `ctrl=${runtime.ctrlHeldEnabled ? 'on' : 'off'}`,
+    ];
+    parts.push(flags.join(','));
+  }
+  if (details.delivery) {
+    parts.push(`delivery=${details.delivery}`);
+  }
+  if (details.cursor && Number.isFinite(details.cursor.x) && Number.isFinite(details.cursor.y)) {
+    parts.push(`cursor=${details.cursor.x},${details.cursor.y}`);
+  }
+  if (typeof details.isForeground === 'boolean') {
+    parts.push(`foreground=${details.isForeground ? 'yes' : 'no'}`);
+  }
+  if (details.title) {
+    parts.push(`title=${details.title}`);
+  }
+  if (details.matchedPattern) {
+    parts.push(`pattern=${details.matchedPattern}`);
+  }
+  if (details.hotkeyId) {
+    parts.push(`hotkey=${details.hotkeyId}`);
+  }
+  if (details.binding) {
+    parts.push(`binding=${details.binding}`);
+  }
+  if (typeof details.activated === 'boolean') {
+    parts.push(`activated=${details.activated ? 'yes' : 'no'}`);
+  }
+  return parts.join(' | ');
+}
+
+function formatAutomationDiagnosticEntry(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return typeof entry === 'string' ? entry : JSON.stringify(entry);
+  }
+
+  const baseMessage = typeof entry.message === 'string' ? entry.message : JSON.stringify(entry);
+  const parts = [];
+
+  if (entry.focusAttempted) {
+    parts.push(`focus=${entry.focusResult?.activated ? 'ok' : 'failed'}`);
+  }
+
+  const detailSummary = formatAutomationDetailSummary(entry.details);
+  if (detailSummary) {
+    parts.push(detailSummary);
+  }
+
+  const targetSummary = formatAutomationTargetSummary(entry.target);
+  if (targetSummary) {
+    parts.push(targetSummary);
+  }
+
+  return parts.length ? `${baseMessage} | ${parts.join(' | ')}` : baseMessage;
 }
 
 function setControlValueIfIdle(control, value, property = 'value') {
@@ -436,7 +521,7 @@ if (window.electronAPI) window.electronAPI.onToggleCollapse(val => setCollapsed(
 function setAltToggleState(isEnabled) {
   state.altHeld = isEnabled;
   dom.altIndicator.classList.toggle('active', isEnabled);
-  dom.altIndicator.textContent = isEnabled ? 'ALT: click enabled' : 'ALT: click-through';
+  dom.altIndicator.textContent = isEnabled ? 'Alt+I/F8: click enabled' : 'Alt+I/F8: click-through';
 }
 
 if (window.electronAPI) {
@@ -1209,8 +1294,8 @@ function renderAutomationState(nextState) {
     ? `${helperStatus.lifecycle || 'unknown'} · ${helperStatus.lastError.code}`
     : (helperStatus.lifecycle || 'unknown');
   dom.automationTargetStatus.textContent = targetStatus.attached
-    ? (targetStatus.isForeground ? 'Attached · foreground' : 'Attached · background')
-    : 'Not attached';
+    ? `${targetStatus.isForeground ? 'Attached · foreground' : 'Attached · background'}${targetStatus.matchedPattern ? ` · ${targetStatus.matchedPattern}` : ''}${targetStatus.title ? ` · ${targetStatus.title}` : ''}`
+    : `Not attached${targetStatus.windowTitlePattern ? ` · looking for ${targetStatus.windowTitlePattern}` : ''}`;
   dom.automationMasterStatus.textContent = runtimeState.masterEnabled ? 'ON' : 'OFF';
   setControlValueIfIdle(dom.automationProfileName, activeProfile.name || '');
   setControlValueIfIdle(dom.automationProfileDescription, activeProfile.description || '');
@@ -1333,7 +1418,20 @@ async function runAutomationTest(action) {
   try {
     const result = await window.electronAPI?.automation?.testAction?.(action, {});
     if (result?.ok) {
-      pushAutomationLog(`test ${action}: ok`);
+      const detailParts = [];
+      if (result.result?.focusAttempted) {
+        detailParts.push(`focus=${result.result?.focusResult?.activated ? 'ok' : 'failed'}`);
+      }
+      const detailSummary = formatAutomationDetailSummary(result.result?.details);
+      if (detailSummary) {
+        detailParts.push(detailSummary);
+      } else {
+        const targetSummary = formatAutomationTargetSummary(result.result?.target);
+        if (targetSummary) {
+          detailParts.push(targetSummary);
+        }
+      }
+      pushAutomationLog(`test ${action}: ok${detailParts.length ? ` | ${detailParts.join(' | ')}` : ''}`);
       setStatus(`Automation test ${action} sent`, 'ok');
     } else {
       pushAutomationLog(`test ${action}: ${result?.error?.message || 'failed'}`);
@@ -1347,12 +1445,16 @@ async function runAutomationTest(action) {
 
 async function toggleAutomationRuntime(toggleId, currentValue) {
   try {
+    if (state.automationState?.runtimeState) {
+      state.automationState.runtimeState[toggleId] = !currentValue;
+      renderAutomationState(state.automationState);
+    }
     await window.electronAPI?.automation?.setRuntimeToggle?.(toggleId, !currentValue);
     pushAutomationLog(`${toggleId} set to ${!currentValue ? 'on' : 'off'}`);
-    void refreshAutomationState();
   } catch (error) {
     pushAutomationLog(`${toggleId} failed: ${error.message}`);
     setStatus(`Automation toggle ${toggleId} failed`, 'error');
+    void refreshAutomationState();
   }
 }
 
@@ -1427,14 +1529,16 @@ dom.automationProfileImport?.addEventListener('click', async () => {
 dom.automationSaveRuntime?.addEventListener('click', async () => {
   const activeProfileId = state.automationState?.activeProfileId;
   const activeProfile = state.automationState?.activeProfile;
+  const runtimeState = state.automationState?.runtimeState;
   if (!activeProfileId || !activeProfile) return;
   await window.electronAPI?.automation?.updateProfile?.(activeProfileId, {
     runtime: {
       ...activeProfile.runtime,
-      leftClickIntervalMs: parseInt(dom.automationLeftInterval.value, 10) || activeProfile.runtime.leftClickIntervalMs,
-      rightClickIntervalMs: parseInt(dom.automationRightInterval.value, 10) || activeProfile.runtime.rightClickIntervalMs,
-      f7IntervalMs: parseInt(dom.automationF7Interval.value, 10) || activeProfile.runtime.f7IntervalMs,
-      jitterPercent: parseInt(dom.automationJitter.value, 10) || activeProfile.runtime.jitterPercent,
+      ...runtimeState,
+      leftClickIntervalMs: parseInt(dom.automationLeftInterval.value, 10) || runtimeState?.leftClickIntervalMs || activeProfile.runtime.leftClickIntervalMs,
+      rightClickIntervalMs: parseInt(dom.automationRightInterval.value, 10) || runtimeState?.rightClickIntervalMs || activeProfile.runtime.rightClickIntervalMs,
+      f7IntervalMs: parseInt(dom.automationF7Interval.value, 10) || runtimeState?.f7IntervalMs || activeProfile.runtime.f7IntervalMs,
+      jitterPercent: parseInt(dom.automationJitter.value, 10) || runtimeState?.jitterPercent || activeProfile.runtime.jitterPercent,
     },
   });
   pushAutomationLog('runtime settings saved');
@@ -1545,17 +1649,44 @@ dom.automationTestLeft?.addEventListener('click', () => { void runAutomationTest
 dom.automationTestRight?.addEventListener('click', () => { void runAutomationTest('rightClick'); });
 dom.automationTestF7?.addEventListener('click', () => { void runAutomationTest('f7Press'); });
 dom.automationTestRelease?.addEventListener('click', () => { void runAutomationTest('releaseModifiers'); });
+dom.automationCopyLog?.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(state.automationLog.join('\n'));
+    setStatus('Diagnostics copied', 'ok');
+  } catch (error) {
+    pushAutomationLog(`copy failed: ${error.message}`);
+    setStatus('Diagnostics copy failed', 'error');
+  }
+});
 
 if (window.electronAPI?.automation) {
   window.electronAPI.automation.onStateChanged(nextState => renderAutomationState(nextState));
   window.electronAPI.automation.onHelperStatus(status => {
-    pushAutomationLog(`helper ${status.lifecycle}${status.lastError?.code ? ` (${status.lastError.code})` : ''}`);
+    const nextLifecycle = status?.lifecycle || '';
+    const nextErrorCode = status?.lastError?.code || '';
+    if (state.automationHelperLifecycle !== nextLifecycle || state.automationHelperErrorCode !== nextErrorCode) {
+      state.automationHelperLifecycle = nextLifecycle;
+      state.automationHelperErrorCode = nextErrorCode;
+      pushAutomationLog(`helper ${nextLifecycle}${nextErrorCode ? ` (${nextErrorCode})` : ''}`);
+    }
     if (state.automationState) {
       renderAutomationState({ ...state.automationState, helperStatus: status });
     }
   });
+  window.electronAPI.automation.onOverlayStatus(status => {
+    if (!state.automationState) {
+      return;
+    }
+    renderAutomationState({
+      ...state.automationState,
+      gameAttachmentStatus: {
+        ...(state.automationState.gameAttachmentStatus || {}),
+        ...(status || {}),
+      },
+    });
+  });
   window.electronAPI.automation.onDiagnosticLog(entry => {
-    pushAutomationLog(typeof entry?.message === 'string' ? entry.message : JSON.stringify(entry));
+    pushAutomationLog(formatAutomationDiagnosticEntry(entry));
   });
 }
 
@@ -1563,7 +1694,7 @@ if (window.electronAPI?.automation) {
 
 (async function init() {
   setAltToggleState(false);
-  setStatus('Ready — Press ALT to interact', 'ok');
+  setStatus('Ready — Press Alt+I or F8 to interact', 'ok');
   const savedOpacity = localStorage.getItem('opacity');
   if (savedOpacity) applyOpacity(parseInt(savedOpacity));
   await Promise.allSettled([ensureFilterMeta(), ensureMapImage(), ensurePool(), updateMinimapSide()]);
