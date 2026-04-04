@@ -1,0 +1,6 @@
+node_modules/
+dist/
+debug/
+data/
+collector/*.db
+*.log

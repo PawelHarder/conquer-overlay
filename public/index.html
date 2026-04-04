@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://conqueronline.net; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none';" />
+  <title>Conquer Market Overlay</title>
+  <style>
+    /* ── Autocomplete ── */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: var(--bg-panel);
+      border: 1px solid var(--gold-dim);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      z-index: 200;
+      max-height: 180px;
+      overflow-y: auto;
+      display: none;
+    }
+    .autocomplete-list.open { display: block; }
+    .autocomplete-item {
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .autocomplete-item:hover,
+    .autocomplete-item.focused { background: var(--bg-hover); color: var(--gold); }
+
+    /* ── Server Selector Bar ── */
+    #server-bar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 8px;
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .server-label {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-right: 4px;
+    }
+    .server-btn {
+      padding: 3px 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-dim);
+      font-family: var(--ui);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .server-btn:hover { color: var(--text); border-color: var(--gold-dim); }
+    .server-btn.active { background: var(--border-gold); color: var(--gold); border-color: var(--gold-dim); }
+
+    /* ── Listings: 4-column grid ── */
+    .listings-header,
+    .listing-row {
+      grid-template-columns: 1fr 72px 64px 88px;
+    }
+    .listing-row { cursor: pointer; }
+    .listing-pos {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    /* ── Sortable headers ── */
+    .listings-header span { cursor: pointer; user-select: none; }
+    .listings-header span:hover { color: var(--text); }
+    .listings-header span.sort-asc::after  { content: ' ▲'; color: var(--gold); }
+    .listings-header span.sort-desc::after { content: ' ▼'; color: var(--gold); }
+
+    /* ── Result containers scrollable ── */
+    #search-results,
+    #watch-matches {
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    /* ── Price input formatted ── */
+    .price-input-wrap { position: relative; }
+    .price-input-wrap input { padding-right: 32px; }
+    .price-input-wrap .currency-hint {
+      position: absolute;
+      right: 8px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    /* ── Clear button ── */
+    .btn-clear {
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-dim);
+      font-family: var(--ui);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .btn-clear:hover { color: var(--red); border-color: var(--red-dim); }
+
+    /* ── Minimap ── */
+    .minimap-wrap {
+      display: none;
+    }
+    #search-minimap,
+    #watch-minimap {
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+    }
+    .minimap-popup {
+      position: fixed;
+      top: 86px;
+      width: 336px;
+      padding: 8px;
+      background: rgba(15, 15, 22, 0.96);
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+      z-index: 80;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(10px);
+      transition: opacity 0.14s ease, transform 0.14s ease;
+    }
+    .minimap-popup.side-left {
+      left: 8px;
+      transform: translateX(-10px);
+    }
+    .minimap-popup.side-right {
+      right: 8px;
+    }
+    .minimap-popup.open {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .minimap-popup.pinned {
+      border-color: var(--gold);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(240, 203, 106, 0.2);
+    }
+    .minimap-title {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    #minimap-popup-canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: var(--bg-card);
+    }
+    .minimap-caption {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      min-height: 12px;
+    }
+
+    /* ── History filters ── */
+    .filter-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .filter-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+    /* ── Watch history-based price ── */
+    .history-price-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 1fr;
+      gap: 6px;
+      align-items: end;
+      margin-bottom: 8px;
+    }
+
+    /* ── Settings ── */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .setting-row label {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      min-width: 90px;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--gold);
+    }
+    .setting-row input[type="number"] {
+      width: 64px;
+    }
+
+    /* ── placeholder-text ── */
+    .placeholder-text {
+      padding: 16px 0;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+  </style>
+  <style>
+    /* ── CSS Variables ── */
+    :root {
+      --gold:        #c8a84b;
+      --gold-dim:    #8a6f2a;
+      --gold-bright: #f0cb6a;
+      --red:         #c43c3c;
+      --red-dim:     #7a2020;
+      --green:       #4caf72;
+      --green-dim:   #2a6042;
+      --bg-deep:     #0a0a0e;
+      --bg-panel:    #0f0f16;
+      --bg-card:     #151520;
+      --bg-hover:    #1c1c2e;
+      --border:      #2a2a40;
+      --border-gold: #3a2e10;
+      --text:        #c8c8d8;
+      --text-dim:    #666688;
+      --text-bright: #e8e8f8;
+      --mono:        Consolas, 'Courier New', monospace;
+      --display:     'Palatino Linotype', Georgia, serif;
+      --ui:          'Segoe UI', Tahoma, sans-serif;
+      --radius:      4px;
+      --shadow:      0 8px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(200,168,75,0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--ui);
+      font-size: 14px;
+      color: var(--text);
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ── Main Overlay Shell ── */
+    #overlay {
+      width: 420px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--gold-dim);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    #overlay::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0.6;
+    }
+
+    /* ── Title Bar ── */
+    #titlebar {
+      display: flex;
+      align-items: center;
+      height: 38px;
+      padding: 0 10px;
+      background: linear-gradient(180deg, #16141e 0%, #0f0f16 100%);
+      border-bottom: 1px solid var(--border);
+      cursor: move;
+      flex-shrink: 0;
+      gap: 8px;
+    }
+
+    .title-icon {
+      font-size: 15px;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+
+    .title-text {
+      font-family: var(--display);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--gold);
+      text-transform: uppercase;
+      flex: 1;
+    }
+
+    .title-hint {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+    }
+
+    .title-btn {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .title-btn:hover { background: var(--bg-hover); color: var(--text-bright); border-color: var(--gold-dim); }
+    .title-btn.close:hover { background: var(--red-dim); border-color: var(--red); color: #fff; }
+
+    /* ── Tab Bar ── */
+    #tabs {
+      display: flex;
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px 4px;
+      text-align: center;
+      font-family: var(--ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* ── Tab Content ── */
+    #content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    #content::-webkit-scrollbar { width: 4px; }
+    #content::-webkit-scrollbar-track { background: var(--bg-deep); }
+    #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .tab-panel { display: none; padding: 12px; }
+    .tab-panel.active { display: block; }
+
+    /* ── Section Labels ── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Price Summary ── */
+    .price-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .price-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px;
+      text-align: center;
+    }
+    .price-card .label {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .price-card .value {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--gold);
+    }
+    .price-card.low .value  { color: var(--green); }
+    .price-card.high .value { color: var(--red); }
+
+    /* ── History Controls ── */
+    .day-filter {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .day-btn {
+      flex: 1;
+      padding: 5px 0;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-dim);
+      font-family: var(--ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+    }
+    .day-btn:hover { color: var(--text); border-color: var(--gold-dim); }
+    .day-btn.active { background: var(--border-gold); color: var(--gold); border-color: var(--gold-dim); }
+
+    /* ── Mini Chart ── */
+    #history-chart {
+      width: 100%;
+      height: 100px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #history-chart canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Listings Table ── */
+    .listings-header {
+      display: grid;
+      grid-template-columns: 1fr 80px 100px;
+      gap: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2px;
+    }
+
+    .listing-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 100px;
+      gap: 4px;
+      padding: 6px 8px;
+      background: var(--bg-card);
+      border: 1px solid transparent;
+      border-radius: 3px;
+      margin-bottom: 2px;
+      transition: all 0.1s;
+      cursor: default;
+    }
+    .listing-row:hover { border-color: var(--border); background: var(--bg-hover); }
+    .listing-row.pinned {
+      border-color: var(--gold-dim);
+      background: rgba(58, 46, 16, 0.45);
+    }
+
+    .listing-seller {
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .listing-quality {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    .listing-price {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--gold);
+      text-align: right;
+    }
+
+    /* ── Search Tab ── */
+    .search-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field-label {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-bright);
+      font-family: var(--ui);
+      font-size: 13px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: var(--gold-dim); }
+    select option { background: var(--bg-panel); }
+
+    .search-row { display: grid; grid-template-columns: 1fr 120px; gap: 8px; }
+
+    .btn-primary {
+      padding: 8px 16px;
+      background: linear-gradient(180deg, #2a220a, #1a1408);
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      color: var(--gold);
+      font-family: var(--ui);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(180deg, #3a2e0e, #241c0a);
+      border-color: var(--gold);
+      color: var(--gold-bright);
+    }
+
+    /* ── Watch / Alert ── */
+    .watch-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+    }
+    .watch-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .watch-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .watch-text { flex: 1; font-size: 12px; color: var(--text-dim); }
+    .watch-text strong { color: var(--text); }
+
+    .btn-danger {
+      padding: 4px 10px;
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      border-radius: 3px;
+      color: #ff8888;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ── Alert Popup ── */
+    #alert-popup {
+      position: fixed;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, #1a2a0a, #0e1a08);
+      border: 1px solid var(--green);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      display: none;
+      box-shadow: 0 0 20px rgba(76, 175, 114, 0.3);
+      z-index: 100;
+      min-width: 280px;
+      animation: slideUp 0.3s ease;
+    }
+    #alert-popup.show { display: block; }
+    @keyframes slideUp { from { transform: translateX(-50%) translateY(10px); opacity:0; } to { transform: translateX(-50%) translateY(0); opacity:1; } }
+
+    .alert-title { font-family: var(--display); font-size: 11px; color: var(--green); letter-spacing: 2px; margin-bottom: 6px; }
+    .alert-item  { font-size: 13px; color: var(--text-bright); margin-bottom: 2px; }
+    .alert-price { font-family: var(--mono); font-size: 14px; color: var(--gold); }
+
+    /* ── Alt Mode Indicator ── */
+    #alt-indicator {
+      position: fixed;
+      bottom: 8px;
+      right: 8px;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 3px;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    #alt-indicator.active {
+      color: var(--gold);
+      border-color: var(--gold-dim);
+      opacity: 1;
+    }
+
+    /* ── Status Bar ── */
+    #statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-deep);
+      flex-shrink: 0;
+    }
+    .status-text { font-family: var(--mono); font-size: 9px; color: var(--text-dim); }
+    .status-dot  {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    .status-dot.error { background: var(--red); }
+    .status-dot.warn  { background: var(--gold); }
+
+    /* ── Loading ── */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Collapsed state ── */
+    body.collapsed #content,
+    body.collapsed #tabs,
+    body.collapsed #statusbar { display: none; }
+
+    /* ── Scrollbar ── */
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-deep); }
+  </style>
+</head>
+<body>
+<div id="overlay">
+
+  <!-- Title Bar (drag handle) -->
+  <div id="titlebar">
+    <span class="title-icon">⚔</span>
+    <span class="title-text">Conquer Market</span>
+    <span class="title-hint" id="alt-hint">ALT toggles interact</span>
+    <button class="title-btn" id="btn-collapse" title="Collapse (Alt+C)">▲</button>
+    <button class="title-btn close" id="btn-close" title="Hide (Alt+H)">✕</button>
+  </div>
+
+  <!-- Tab Bar -->
+  <div id="tabs">
+    <div class="tab active" data-tab="search">Search</div>
+    <div class="tab" data-tab="history">History</div>
+    <div class="tab" data-tab="watch">Watch</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
+
+  <!-- Server Selector Bar -->
+  <div id="server-bar">
+    <span class="server-label">Server</span>
+    <button class="server-btn active" data-server="">Any</button>
+    <button class="server-btn" data-server="Classic_EU">Classic EU</button>
+    <button class="server-btn" data-server="Classic_US">Classic US</button>
+  </div>
+
+  <!-- Tab Content -->
+  <div id="content">
+
+    <!-- ── Search (merged Price Check) ── -->
+    <div class="tab-panel active" id="tab-search">
+
+      <div class="search-form">
+        <div class="field-group">
+          <div class="field-label">Item Name / Keyword</div>
+          <div class="search-row">
+            <div class="autocomplete-wrap" style="flex:1">
+              <input type="text" id="search-input" placeholder="Search market..." autocomplete="off" />
+              <div class="autocomplete-list" id="search-autocomplete"></div>
+            </div>
+            <button class="btn-primary" id="search-btn">Search</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="field-group">
+            <div class="field-label">Category</div>
+            <select id="search-major">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Minor Class</div>
+            <select id="search-minor">
+              <option value="">All Minor Classes</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div class="field-group">
+            <div class="field-label">Quality</div>
+            <select id="search-quality">
+              <option value="">All Qualities</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">+Level</div>
+            <select id="search-plus">
+              <option value="">Any Plus</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Sockets</div>
+            <select id="search-sockets">
+              <option value="">Any Sockets</option>
+              <option value="0">No sockets</option>
+              <option value="1">1 socket</option>
+              <option value="2">2 sockets</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="field-group">
+            <div class="field-label">Min Price</div>
+            <div class="price-input-wrap">
+              <input type="text" id="search-minprice" placeholder="No minimum" autocomplete="off" />
+              <span class="currency-hint">gold</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Max Price</div>
+            <div class="price-input-wrap">
+              <input type="text" id="search-maxprice" placeholder="No limit" autocomplete="off" />
+              <span class="currency-hint">gold</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:6px;">
+          <button class="btn-clear" id="search-clear">Clear</button>
+        </div>
+      </div>
+
+      <div class="section-label">Live Prices</div>
+      <div class="price-row">
+        <div class="price-card low">
+          <div class="label">Lowest</div>
+          <div class="value" id="price-low">—</div>
+        </div>
+        <div class="price-card">
+          <div class="label">Average</div>
+          <div class="value" id="price-avg">—</div>
+        </div>
+        <div class="price-card high">
+          <div class="label">Highest</div>
+          <div class="value" id="price-high">—</div>
+        </div>
+      </div>
+
+      <div class="section-label">Results <span id="search-count" style="color:var(--text-dim)"></span></div>
+      <div class="listings-header">
+        <span data-sort="SellerName">Seller</span>
+        <span data-sort="QualityName" style="text-align:center">Quality</span>
+        <span data-sort="pos" style="text-align:center">Loc</span>
+        <span data-sort="Price" style="text-align:right" class="sort-asc">Price</span>
+      </div>
+      <div id="search-results">
+        <div class="placeholder-text">Enter search terms above</div>
+      </div>
+
+      <div class="minimap-wrap">
+        <canvas id="search-minimap" width="240" height="160"></canvas>
+      </div>
+    </div>
+
+    <!-- ── History ── -->
+    <div class="tab-panel" id="tab-history">
+
+      <div class="section-label">Filters</div>
+      <div class="search-form">
+        <div class="field-group">
+          <div class="field-label">Item Name</div>
+          <div class="autocomplete-wrap">
+            <input type="text" id="history-item-name" placeholder="e.g. DragonBall, SkyBlade..." autocomplete="off" />
+            <div class="autocomplete-list" id="history-autocomplete"></div>
+          </div>
+        </div>
+
+        <div class="filter-grid-3">
+          <div class="field-group">
+            <div class="field-label">Minor Class</div>
+            <select id="history-minor">
+              <option value="">Any Minor Class</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Quality</div>
+            <select id="history-quality">
+              <option value="">Any Quality</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">+Level</div>
+            <select id="history-plus">
+              <option value="">Any Plus</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-grid-2">
+          <div class="field-group">
+            <div class="field-label">Sockets</div>
+            <select id="history-sockets">
+              <option value="">Any</option>
+              <option value="0">No sockets</option>
+              <option value="1">1 socket</option>
+              <option value="2">2 sockets</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">&nbsp;</div>
+            <button class="btn-primary" id="history-search-btn">Load</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn-clear" id="history-clear">Clear</button>
+        </div>
+      </div>
+
+      <div class="section-label">Time Range</div>
+      <div class="day-filter">
+        <div class="day-btn" data-days="1">1d</div>
+        <div class="day-btn" data-days="3">3d</div>
+        <div class="day-btn active" data-days="7">7d</div>
+        <div class="day-btn" data-days="14">14d</div>
+        <div class="day-btn" data-days="30">30d</div>
+      </div>
+
+      <div class="section-label">Price Trend</div>
+      <div id="history-chart">
+        <canvas id="chart-canvas"></canvas>
+        <div class="chart-placeholder" id="chart-placeholder">Set filters and click Load</div>
+      </div>
+
+      <div class="section-label">Stats</div>
+      <div class="price-row">
+        <div class="price-card low">
+          <div class="label">Period Low</div>
+          <div class="value" id="hist-low">—</div>
+        </div>
+        <div class="price-card">
+          <div class="label">Median</div>
+          <div class="value" id="hist-med">—</div>
+        </div>
+        <div class="price-card high">
+          <div class="label">Period High</div>
+          <div class="value" id="hist-high">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Watch / Alert ── -->
+    <div class="tab-panel" id="tab-watch">
+
+      <div class="section-label">Filters</div>
+      <div class="search-form">
+        <div class="field-group">
+          <div class="field-label">Item Name</div>
+          <div class="autocomplete-wrap">
+            <input type="text" id="watch-item" placeholder="e.g. DragonClaw, Phoenix Armor..." autocomplete="off" />
+            <div class="autocomplete-list" id="watch-autocomplete"></div>
+          </div>
+        </div>
+
+        <div class="filter-grid-3">
+          <div class="field-group">
+            <div class="field-label">Minor Class</div>
+            <select id="watch-minor">
+              <option value="">Any Minor Class</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Quality</div>
+            <select id="watch-quality">
+              <option value="">Any Quality</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">+Level</div>
+            <select id="watch-plus">
+              <option value="">Any Plus</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-grid-2">
+          <div class="field-group">
+            <div class="field-label">Sockets</div>
+            <select id="watch-sockets">
+              <option value="">Any</option>
+              <option value="0">No sockets</option>
+              <option value="1">1 socket</option>
+              <option value="2">2 sockets</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Poll Interval</div>
+            <select id="watch-interval">
+              <option value="10000">Every 10 sec</option>
+              <option value="15000" selected>Every 15 sec</option>
+              <option value="30000">Every 30 sec</option>
+              <option value="60000">Every 1 min</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-label">Max Price</div>
+        <div class="history-price-row">
+          <div class="field-group">
+            <div class="field-label">Basis</div>
+            <select id="watch-price-basis">
+              <option value="">Manual</option>
+              <option value="lowest">% below Lowest</option>
+              <option value="average">% below Average</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">%</div>
+            <input type="number" id="watch-price-pct" placeholder="10" min="0" max="99" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">&nbsp;</div>
+            <button class="btn-primary" id="watch-use-history-btn" style="font-size:10px;padding:6px 8px;">Use History</button>
+          </div>
+        </div>
+        <div class="price-input-wrap">
+          <input type="text" id="watch-price" placeholder="Max price (gold)" autocomplete="off" />
+          <span class="currency-hint">gold</span>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;margin-top:6px;gap:6px;">
+          <button class="btn-clear" id="watch-clear">Clear</button>
+          <button class="btn-primary" id="watch-start-btn">▶ Watch</button>
+        </div>
+      </div>
+
+      <div class="section-label">Active Watch</div>
+      <div class="watch-status">
+        <div class="watch-dot" id="watch-dot"></div>
+        <div class="watch-text" id="watch-text">No active watch</div>
+      </div>
+
+      <div class="section-label">Match History</div>
+      <div class="listings-header">
+        <span data-sort="SellerName">Seller</span>
+        <span data-sort="QualityName" style="text-align:center">Quality</span>
+        <span data-sort="pos" style="text-align:center">Loc</span>
+        <span data-sort="Price" style="text-align:right" class="sort-asc">Price</span>
+      </div>
+      <div id="watch-matches">
+        <div class="placeholder-text">Matches will appear here</div>
+      </div>
+
+      <div class="minimap-wrap">
+        <canvas id="watch-minimap" width="240" height="160"></canvas>
+      </div>
+    </div>
+
+    <!-- ── Settings ── -->
+    <div class="tab-panel" id="tab-settings">
+
+      <div class="section-label">Display</div>
+
+      <div class="setting-row">
+        <label>Transparency</label>
+        <input type="range" id="opacity-slider" min="10" max="100" value="100" />
+        <input type="number" id="opacity-input" min="10" max="100" value="100" style="width:56px" />
+        <span style="font-size:10px;color:var(--text-dim)">%</span>
+      </div>
+
+      <div class="section-label">Window</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">
+        Position is saved automatically when you move the window.
+      </div>
+      <button class="btn-primary" id="reset-position-btn" style="width:100%">Reset Window Position</button>
+    </div>
+
+  </div>
+
+  <!-- Status Bar -->
+  <div id="statusbar">
+    <span class="status-text" id="status-text">Ready</span>
+    <div class="status-dot" id="status-dot"></div>
+  </div>
+
+</div>
+
+<div id="minimap-popup" class="minimap-popup side-right">
+  <div class="minimap-title">Location Preview</div>
+  <canvas id="minimap-popup-canvas" width="318" height="318"></canvas>
+  <div class="minimap-caption" id="minimap-popup-caption">Hover a listing to preview its position</div>
+</div>
+
+<!-- Alert Popup (deal found) -->
+<div id="alert-popup">
+  <div class="alert-title">⚑ DEAL FOUND</div>
+  <div class="alert-item" id="alert-item-name">—</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+    <span style="font-size:11px;color:var(--text-dim)" id="alert-seller">—</span>
+    <span class="alert-price" id="alert-price">—</span>
+  </div>
+</div>
+
+<!-- Alt Mode Indicator -->
+<div id="alt-indicator">ALT: click-through</div>
+
+<script type="module" src="../src/renderer.js"></script>
+</body>
+</html>
