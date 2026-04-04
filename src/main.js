@@ -1,8 +1,12 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 const { uIOhook, UiohookKey } = require('uiohook-napi');
+const { ProfileStore } = require('./profile-store');
+const { AutomationHelperClient } = require('./automation-helper-client');
+const { AutomationService } = require('./automation-service');
+const { createHudWindow } = require('./hud-window');
 
 const MARKET_BASE_URL = 'https://conqueronline.net';
 const MARKET_REQUEST_TIMEOUT_MS = 10000;
@@ -13,6 +17,11 @@ let isInteractive = false;
 let altPressed = false;
 let altUsedAsModifier = false;
 let overlayState = null;
+let automationService = null;
+let isShuttingDown = false;
+const automationHotkeysDown = new Set();
+let automationHudWindow = null;
+let automationBuffWindow = null;
 
 // ── DB access (read-only) for history/watch queries ──────────────────────────
 let db = null;
@@ -206,6 +215,215 @@ function persistCurrentWindowPosition() {
   saveOverlayState({ x, y });
 }
 
+function sendRendererEvent(channel, payload) {
+  for (const window of getAutomationRendererWindows()) {
+    if (!window || window.isDestroyed()) continue;
+    window.webContents.send(channel, payload);
+  }
+}
+
+function getAutomationRendererWindows() {
+  return [overlayWindow, automationHudWindow, automationBuffWindow].filter(Boolean);
+}
+
+function matchesAutomationHotkeyBinding(binding, event) {
+  if (!binding) return false;
+  if (binding === 'MouseMiddle') {
+    return event?.kind === 'mouse' && Number(event.button) === 3;
+  }
+
+  const keycode = UiohookKey[binding];
+  return Number.isFinite(keycode) && event?.kind === 'key' && event.keycode === keycode;
+}
+
+function shouldHandleAutomationHotkey(entry) {
+  const capabilities = automationService?.getState?.()?.helperStatus?.capabilities || [];
+  if (capabilities.includes('hotkeyRegistration')) return false;
+  if (!entry?.enabled) return false;
+  if (entry.scope !== 'game-focused') return true;
+  const runtimeState = automationService?.getState?.();
+  return Boolean(runtimeState?.gameAttachmentStatus?.isForeground);
+}
+
+async function handleAutomationHotkeyEvent(event) {
+  if (!automationService) return;
+
+  const hotkeys = automationService.getActiveHotkeys();
+  for (const [hotkeyId, entry] of Object.entries(hotkeys)) {
+    if (!matchesAutomationHotkeyBinding(entry.binding, event)) continue;
+    if (!shouldHandleAutomationHotkey(entry)) return;
+
+    const dedupeKey = `${event.kind}:${entry.binding}`;
+    if (automationHotkeysDown.has(dedupeKey)) return;
+    automationHotkeysDown.add(dedupeKey);
+
+    try {
+      await automationService.triggerHotkey(hotkeyId);
+    } catch (error) {
+      sendDebugMessage(`Automation hotkey failed: ${error.message}`);
+    }
+    return;
+  }
+}
+
+function releaseAutomationHotkeyEvent(event) {
+  if (!event?.kind) return;
+  if (event.kind === 'mouse' && Number(event.button) === 3) {
+    automationHotkeysDown.delete('mouse:MouseMiddle');
+    return;
+  }
+
+  for (const binding of Object.keys(UiohookKey)) {
+    if (UiohookKey[binding] === event.keycode) {
+      automationHotkeysDown.delete(`key:${binding}`);
+    }
+  }
+}
+
+function getAutomationHelperPath() {
+  if (process.env.CONQUER_AUTOMATION_HELPER_PATH) {
+    return {
+      helperPath: process.env.CONQUER_AUTOMATION_HELPER_PATH,
+      helperArgs: [],
+    };
+  }
+
+  if (app.isPackaged) {
+    const packagedHelperExe = path.join(process.resourcesPath, 'native-helper', 'conquer-helper.exe');
+    const packagedHelperScript = path.join(process.resourcesPath, 'native-helper', 'conquer-helper-spike.ps1');
+    if (fs.existsSync(packagedHelperExe)) {
+      return {
+        helperPath: packagedHelperExe,
+        helperArgs: [],
+      };
+    }
+    if (fs.existsSync(packagedHelperScript)) {
+      return {
+        helperPath: packagedHelperScript,
+        launchCommand: 'powershell.exe',
+        launchArgs: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', packagedHelperScript],
+      };
+    }
+    return {
+      helperPath: packagedHelperExe,
+      helperArgs: [],
+    };
+  }
+
+  const scriptPath = path.join(__dirname, '../native-helper/conquer-helper-spike.ps1');
+  if (fs.existsSync(scriptPath)) {
+    return {
+      helperPath: scriptPath,
+      launchCommand: 'powershell.exe',
+      launchArgs: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
+    };
+  }
+
+  return {
+    helperPath: path.join(__dirname, '../native-helper/conquer-helper.exe'),
+    helperArgs: [],
+  };
+}
+
+async function setupAutomation() {
+  const helperConfig = getAutomationHelperPath();
+  const profileStore = new ProfileStore({ userDataPath: app.getPath('userData') });
+  const helperClient = new AutomationHelperClient({
+    ...helperConfig,
+    cwd: path.join(__dirname, '..'),
+    logger: (tag, message) => sendDebugMessage(`[${tag}] ${message}`),
+  });
+
+  automationService = new AutomationService({ profileStore, helperClient });
+  automationService.on('state-changed', state => {
+    sendRendererEvent('automation:state-changed', state);
+    updateAutomationOverlayWindows(state);
+  });
+  automationService.on('helper-status', status => sendRendererEvent('automation:helper-status', status));
+  automationService.on('helper-message', message => {
+    if (message.type === 'target-status') {
+      sendRendererEvent('automation:overlay-status', message.payload ?? null);
+      return;
+    }
+
+    if (message.type === 'log' || message.type === 'warning' || message.type === 'error') {
+      sendRendererEvent('automation:diagnostic-log', message.payload ?? message);
+    }
+  });
+
+  await automationService.init();
+}
+
+function createAutomationOverlayWindows() {
+  const preloadPath = path.join(__dirname, 'preload.js');
+  automationHudWindow = createHudWindow({
+    htmlFile: path.join(__dirname, '../public/automation-hud.html'),
+    preloadPath,
+    width: 380,
+    height: 76,
+  });
+  automationBuffWindow = createHudWindow({
+    htmlFile: path.join(__dirname, '../public/automation-buffs.html'),
+    preloadPath,
+    width: 190,
+    height: 260,
+  });
+}
+
+function updateAutomationOverlayWindows(state) {
+  if (!automationHudWindow || !automationBuffWindow) return;
+
+  const workArea = screen.getPrimaryDisplay().workArea;
+  const overlay = state?.overlayState || {};
+  const targetRect = state?.gameAttachmentStatus?.rect;
+  const isGameForeground = Boolean(state?.gameAttachmentStatus?.isForeground);
+  const configuredBuffs = Object.values(state?.activeProfile?.buffs || {}).filter(buff => buff?.visibleInOverlay);
+  const activeBuffCount = Object.values(state?.buffRuntimeState || {}).filter(buff => buff.active).length;
+  const buffCardCount = overlay.showOnlyActiveBuffs === false
+    ? configuredBuffs.length
+    : activeBuffCount;
+  const anchorRect = overlay.anchorMode === 'game-relative' && targetRect?.width
+    ? targetRect
+    : { x: workArea.x || 0, y: workArea.y || 0, width: workArea.width, height: workArea.height };
+
+  const hudX = Math.round(anchorRect.x + (anchorRect.width / 2) - 190 + (overlay.hudOffset?.x || 0));
+  const hudY = Math.round(anchorRect.y + 28 + (overlay.hudOffset?.y || 0));
+  automationHudWindow.setPosition(hudX, hudY);
+  automationHudWindow.setOpacity(Math.max(0.15, Math.min(1, (overlay.hudOpacity ?? 85) / 100)));
+
+  const buffHeight = Math.max(76, (buffCardCount || 1) * 88 + 8);
+  const buffX = Math.round(anchorRect.x + anchorRect.width - 210 + (overlay.buffOffset?.x || 0));
+  const buffY = Math.round(anchorRect.y + (anchorRect.height * 0.4) - (buffHeight / 2) + (overlay.buffOffset?.y || 0));
+  automationBuffWindow.setBounds({ x: buffX, y: buffY, width: 190, height: buffHeight });
+  automationBuffWindow.setOpacity(Math.max(0.15, Math.min(1, (overlay.buffOverlayOpacity ?? 90) / 100)));
+
+  const showHud = Boolean(overlay.hudEnabled)
+    && (!overlay.hideHudWhenGameUnfocused || isGameForeground);
+  const showBuffs = Boolean(overlay.buffOverlayEnabled)
+    && buffCardCount > 0
+    && (!overlay.hideBuffOverlayWhenGameUnfocused || isGameForeground);
+
+  if (showHud) automationHudWindow.showInactive(); else automationHudWindow.hide();
+  if (showBuffs) automationBuffWindow.showInactive(); else automationBuffWindow.hide();
+}
+
+async function shutdownApp() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  persistCurrentWindowPosition();
+  if (automationService) {
+    try {
+      await automationService.dispose();
+    } catch (_) {
+      // Ignore shutdown failures.
+    }
+  }
+
+  try { uIOhook.stop(); } catch (_) {}
+  process.exit(0);
+}
+
 
 // ── Window Creation ──────────────────────────────────────────────────────────
 
@@ -278,6 +496,8 @@ function setInteractiveMode(nextInteractive) {
 
 function setupAltToggleTracking() {
   uIOhook.on('keydown', event => {
+    void handleAutomationHotkeyEvent({ kind: 'key', keycode: event.keycode });
+
     if (event.keycode === UiohookKey.Alt || event.keycode === UiohookKey.AltRight) {
       altPressed = true;
       altUsedAsModifier = false;
@@ -308,6 +528,8 @@ function setupAltToggleTracking() {
   });
 
   uIOhook.on('keyup', event => {
+    releaseAutomationHotkeyEvent({ kind: 'key', keycode: event.keycode });
+
     if (event.keycode !== UiohookKey.Alt && event.keycode !== UiohookKey.AltRight) {
       return;
     }
@@ -319,6 +541,14 @@ function setupAltToggleTracking() {
     if (shouldToggle) {
       setInteractiveMode(!isInteractive);
     }
+  });
+
+  uIOhook.on('mousedown', event => {
+    void handleAutomationHotkeyEvent({ kind: 'mouse', button: event.button });
+  });
+
+  uIOhook.on('mouseup', event => {
+    releaseAutomationHotkeyEvent({ kind: 'mouse', button: event.button });
   });
 
   uIOhook.start();
@@ -373,9 +603,7 @@ function setupIPC() {
   });
 
   ipcMain.on('close-app', () => {
-    persistCurrentWindowPosition();
-    try { uIOhook.stop(); } catch (_) {}
-    process.exit(0);
+    void shutdownApp();
   });
 
   ipcMain.handle('get-window-pos', () => {
@@ -415,20 +643,73 @@ function setupIPC() {
       return null;
     }
   });
+
+  // ── Automation ────────────────────────────────────────────────────────────
+  ipcMain.handle('automation:get-state', () => automationService?.getState() ?? null);
+  ipcMain.handle('automation:list-profiles', () => automationService?.listProfiles() ?? []);
+  ipcMain.handle('automation:get-profile', (_, profileId) => automationService?.getProfile(profileId) ?? null);
+  ipcMain.handle('automation:create-profile', (_, options) => automationService?.createProfile(options ?? {}) ?? null);
+  ipcMain.handle('automation:update-profile', (_, { profileId, changes } = {}) => automationService?.updateProfile(profileId, changes ?? {}) ?? null);
+  ipcMain.handle('automation:delete-profile', (_, profileId) => automationService?.deleteProfile(profileId) ?? null);
+  ipcMain.handle('automation:set-active-profile', (_, profileId) => automationService?.setActiveProfile(profileId) ?? null);
+  ipcMain.handle('automation:export-profile', async (_, { destinationPath, profileIds, appVersion } = {}) => {
+    if (!automationService) return null;
+    return automationService.profileStore.exportProfiles(destinationPath, profileIds, { appVersion });
+  });
+  ipcMain.handle('automation:import-profile', async (_, sourcePath) => {
+    if (!automationService) return [];
+    const imported = automationService.profileStore.importProfiles(sourcePath);
+    automationService.reloadDocument();
+    automationService.applyProfile(automationService.profileStore.getActiveProfile());
+    return imported;
+  });
+  ipcMain.handle('automation:set-master-enabled', (_, enabled) => automationService?.setMasterEnabled(enabled) ?? null);
+  ipcMain.handle('automation:set-runtime-toggle', (_, { toggleId, enabled } = {}) => automationService?.setRuntimeToggle(toggleId, enabled) ?? null);
+  ipcMain.handle('automation:test-action', (_, { action, payload } = {}) => automationService?.testAction(action, payload ?? {}) ?? null);
+  ipcMain.handle('automation:bind-hotkey', (_, { hotkeyId, binding } = {}) => automationService?.bindHotkey(hotkeyId, binding) ?? null);
+  ipcMain.handle('automation:cancel-bind-hotkey', () => ({ ok: true }));
+  ipcMain.handle('automation:restart-helper', () => automationService?.restartHelper() ?? null);
+  ipcMain.handle('automation:emergency-stop', () => automationService?.emergencyStop() ?? null);
+  ipcMain.handle('automation:set-overlay-preferences', (_, changes) => automationService?.setOverlayPreferences(changes ?? {}) ?? null);
+  ipcMain.handle('automation:toggle-buff', (_, buffId) => automationService?.toggleBuff(buffId) ?? null);
+  ipcMain.handle('automation:pause-buff', (_, buffId) => automationService?.pauseBuff(buffId) ?? null);
+  ipcMain.handle('automation:export-profile-dialog', async () => {
+    if (!automationService || !overlayWindow) return null;
+    const activeProfile = automationService.profileStore.getActiveProfile();
+    const result = await dialog.showSaveDialog(overlayWindow, {
+      title: 'Export Automation Profile',
+      defaultPath: `${activeProfile.name.replace(/[^a-z0-9-_ ]/gi, '_')}.automation-profile.json`,
+      filters: [{ name: 'Automation Profiles', extensions: ['json'] }],
+    });
+    if (result.canceled || !result.filePath) return null;
+    return automationService.profileStore.exportProfiles(result.filePath, [activeProfile.id], { appVersion: app.getVersion() });
+  });
+  ipcMain.handle('automation:import-profile-dialog', async () => {
+    if (!automationService || !overlayWindow) return [];
+    const result = await dialog.showOpenDialog(overlayWindow, {
+      title: 'Import Automation Profiles',
+      filters: [{ name: 'Automation Profiles', extensions: ['json'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || !result.filePaths?.length) return [];
+    const imported = automationService.profileStore.importProfiles(result.filePaths[0]);
+    automationService.reloadDocument();
+    automationService.applyProfile(automationService.profileStore.getActiveProfile());
+    return imported;
+  });
 }
 
 // ── App Lifecycle ─────────────────────────────────────────────────────────────
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createOverlay();
+  createAutomationOverlayWindows();
   setupAltToggleTracking();
+  await setupAutomation();
   setupIPC();
   broadcastAltState();
 });
 
 app.on('window-all-closed', () => {
-  // Stop the native hook thread synchronously — uiohook-napi keeps the
-  // process alive if not stopped, causing ghost Electron processes after close.
-  try { uIOhook.stop(); } catch (_) {}
-  process.exit(0);
+  void shutdownApp();
 });

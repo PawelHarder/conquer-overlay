@@ -23,9 +23,25 @@ const state = {
   mapImage:         null,
   minimapSide:      'right',
   minimapPinned:    null,
+  automationState:  null,
+  automationLog:    [],
 };
 
 const MINIMAP_POPUP_WIDTH = 336;
+const AUTOMATION_HOTKEY_OPTIONS = [
+  ['', 'Disabled'],
+  ['MouseMiddle', 'Mouse Middle'],
+  ['Escape', 'Escape'],
+  ['F1', 'F1'],
+  ['F2', 'F2'],
+  ['F3', 'F3'],
+  ['F7', 'F7'],
+  ['Semicolon', 'Semicolon'],
+  ['Quote', 'Quote'],
+  ['Comma', 'Comma'],
+  ['BracketLeft', 'Bracket Left'],
+  ['BracketRight', 'Bracket Right'],
+];
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 
@@ -94,6 +110,77 @@ const dom = {
   opacitySlider:       $('opacity-slider'),
   opacityInput:        $('opacity-input'),
   resetPositionBtn:    $('reset-position-btn'),
+  automationProfile:   $('automation-profile-select'),
+  automationProfileNew:$('automation-profile-new'),
+  automationProfileDelete:$('automation-profile-delete'),
+  automationProfileExport:$('automation-profile-export'),
+  automationProfileImport:$('automation-profile-import'),
+  automationHelperStatus:$('automation-helper-status'),
+  automationTargetStatus:$('automation-target-status'),
+  automationMasterStatus:$('automation-master-status'),
+  automationLeftInterval:$('automation-left-interval'),
+  automationRightInterval:$('automation-right-interval'),
+  automationF7Interval: $('automation-f7-interval'),
+  automationJitter:     $('automation-jitter'),
+  automationSaveRuntime:$('automation-save-runtime'),
+  automationProfileName:$('automation-profile-name'),
+  automationProfileDescription:$('automation-profile-description'),
+  automationTargetTitle:$('automation-target-title'),
+  automationTargetMatchMode:$('automation-target-match-mode'),
+  automationTargetProcessName:$('automation-target-process-name'),
+  automationTargetRequireForeground:$('automation-target-require-foreground'),
+  automationTargetPollInterval:$('automation-target-poll-interval'),
+  automationSaveProfileTarget:$('automation-save-profile-target'),
+  automationBuffStigmaLabel:$('automation-buff-stigma-label'),
+  automationBuffStigmaDuration:$('automation-buff-stigma-duration'),
+  automationBuffStigmaWarn1:$('automation-buff-stigma-warn1'),
+  automationBuffStigmaWarn2:$('automation-buff-stigma-warn2'),
+  automationBuffStigmaVisible:$('automation-buff-stigma-visible'),
+  automationBuffShieldLabel:$('automation-buff-shield-label'),
+  automationBuffShieldDuration:$('automation-buff-shield-duration'),
+  automationBuffShieldWarn1:$('automation-buff-shield-warn1'),
+  automationBuffShieldWarn2:$('automation-buff-shield-warn2'),
+  automationBuffShieldVisible:$('automation-buff-shield-visible'),
+  automationBuffInvisibilityLabel:$('automation-buff-invisibility-label'),
+  automationBuffInvisibilityDuration:$('automation-buff-invisibility-duration'),
+  automationBuffInvisibilityWarn1:$('automation-buff-invisibility-warn1'),
+  automationBuffInvisibilityWarn2:$('automation-buff-invisibility-warn2'),
+  automationBuffInvisibilityVisible:$('automation-buff-invisibility-visible'),
+  automationSaveBuffs:$('automation-save-buffs'),
+  automationHotkeyMaster:$('automation-hotkey-master'),
+  automationHotkeyEmergency:$('automation-hotkey-emergency'),
+  automationHotkeyLeft:$('automation-hotkey-left'),
+  automationHotkeyRight:$('automation-hotkey-right'),
+  automationHotkeyF7:$('automation-hotkey-f7'),
+  automationHotkeyShift:$('automation-hotkey-shift'),
+  automationHotkeyCtrl:$('automation-hotkey-ctrl'),
+  automationHotkeyStigma:$('automation-hotkey-stigma'),
+  automationHotkeyShield:$('automation-hotkey-shield'),
+  automationHotkeyInvisibility:$('automation-hotkey-invisibility'),
+  automationSaveHotkeys:$('automation-save-hotkeys'),
+  automationHudEnabled: $('automation-hud-enabled'),
+  automationBuffsEnabled:$('automation-buffs-enabled'),
+  automationCompactHud:$('automation-compact-hud'),
+  automationShowActiveBuffsOnly:$('automation-show-active-buffs-only'),
+  automationHideHudUnfocused:$('automation-hide-hud-unfocused'),
+  automationHideBuffsUnfocused:$('automation-hide-buffs-unfocused'),
+  automationAnchorMode: $('automation-anchor-mode'),
+  automationSaveOverlays:$('automation-save-overlays'),
+  automationRefreshBtn:$('automation-refresh-btn'),
+  automationRestartBtn:$('automation-restart-btn'),
+  automationMasterBtn: $('automation-master-btn'),
+  automationStopBtn:   $('automation-stop-btn'),
+  automationToggleLeft:$('automation-toggle-left'),
+  automationToggleRight:$('automation-toggle-right'),
+  automationToggleF7:  $('automation-toggle-f7'),
+  automationToggleShift:$('automation-toggle-shift'),
+  automationToggleCtrl:$('automation-toggle-ctrl'),
+  automationTestLeft:  $('automation-test-left'),
+  automationTestRight: $('automation-test-right'),
+  automationTestF7:    $('automation-test-f7'),
+  automationTestRelease:$('automation-test-release'),
+  automationLog:       $('automation-log'),
+  automationBuffList:  $('automation-buff-list'),
 
   alertPopup:          $('alert-popup'),
   alertItemName:       $('alert-item-name'),
@@ -126,6 +213,50 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function pushAutomationLog(message) {
+  const text = typeof message === 'string' ? message : JSON.stringify(message);
+  state.automationLog.unshift(text);
+  state.automationLog = state.automationLog.slice(0, 10);
+  if (dom.automationLog) {
+    dom.automationLog.textContent = state.automationLog.join('\n');
+  }
+}
+
+function setControlValueIfIdle(control, value, property = 'value') {
+  if (!control) return;
+  if (document.activeElement === control) return;
+  control[property] = value;
+}
+
+function setNestedControlValues(controlMap, values, property = 'value') {
+  Object.entries(controlMap).forEach(([key, control]) => {
+    setControlValueIfIdle(control, values?.[key], property);
+  });
+}
+
+function populateAutomationHotkeySelects() {
+  const markup = AUTOMATION_HOTKEY_OPTIONS
+    .map(([value, label]) => `<option value="${escHtml(value)}">${escHtml(label)}</option>`)
+    .join('');
+  [
+    dom.automationHotkeyMaster,
+    dom.automationHotkeyEmergency,
+    dom.automationHotkeyLeft,
+    dom.automationHotkeyRight,
+    dom.automationHotkeyF7,
+    dom.automationHotkeyShift,
+    dom.automationHotkeyCtrl,
+    dom.automationHotkeyStigma,
+    dom.automationHotkeyShield,
+    dom.automationHotkeyInvisibility,
+  ].forEach(select => {
+    if (select && !select.dataset.optionsReady) {
+      select.innerHTML = markup;
+      select.dataset.optionsReady = 'true';
+    }
+  });
 }
 
 // ── Locale-aware Price Inputs ─────────────────────────────────────────────────
@@ -1054,6 +1185,380 @@ dom.resetPositionBtn.addEventListener('click', () => {
   setStatus('Position reset', 'ok');
 });
 
+function renderAutomationState(nextState) {
+  state.automationState = nextState;
+  if (!nextState) {
+    dom.automationHelperStatus.textContent = 'Unavailable';
+    dom.automationTargetStatus.textContent = 'Unavailable';
+    dom.automationMasterStatus.textContent = 'Unavailable';
+    return;
+  }
+
+  const helperStatus = nextState.helperStatus || {};
+  const targetStatus = nextState.gameAttachmentStatus || {};
+  const runtimeState = nextState.runtimeState || {};
+  const overlayState = nextState.overlayState || {};
+  const activeProfile = nextState.activeProfile || {};
+  const gameTarget = activeProfile.gameTarget || {};
+  const buffs = activeProfile.buffs || {};
+  const hotkeys = activeProfile.hotkeys || {};
+
+  populateAutomationHotkeySelects();
+
+  dom.automationHelperStatus.textContent = helperStatus.lastError?.code
+    ? `${helperStatus.lifecycle || 'unknown'} · ${helperStatus.lastError.code}`
+    : (helperStatus.lifecycle || 'unknown');
+  dom.automationTargetStatus.textContent = targetStatus.attached
+    ? (targetStatus.isForeground ? 'Attached · foreground' : 'Attached · background')
+    : 'Not attached';
+  dom.automationMasterStatus.textContent = runtimeState.masterEnabled ? 'ON' : 'OFF';
+  setControlValueIfIdle(dom.automationProfileName, activeProfile.name || '');
+  setControlValueIfIdle(dom.automationProfileDescription, activeProfile.description || '');
+  setControlValueIfIdle(dom.automationTargetTitle, gameTarget.windowTitlePattern || '');
+  setControlValueIfIdle(dom.automationTargetMatchMode, gameTarget.matchMode || 'process-first');
+  setControlValueIfIdle(dom.automationTargetProcessName, gameTarget.processName || '');
+  setControlValueIfIdle(dom.automationTargetRequireForeground, Boolean(gameTarget.requireForegroundForInput), 'checked');
+  setControlValueIfIdle(dom.automationTargetPollInterval, gameTarget.windowPollIntervalMs ?? 500);
+  setControlValueIfIdle(dom.automationLeftInterval, runtimeState.leftClickIntervalMs ?? 80);
+  setControlValueIfIdle(dom.automationRightInterval, runtimeState.rightClickIntervalMs ?? 120);
+  setControlValueIfIdle(dom.automationF7Interval, runtimeState.f7IntervalMs ?? 500);
+  setControlValueIfIdle(dom.automationJitter, runtimeState.jitterPercent ?? 15);
+  setControlValueIfIdle(dom.automationHudEnabled, Boolean(overlayState.hudEnabled), 'checked');
+  setControlValueIfIdle(dom.automationBuffsEnabled, Boolean(overlayState.buffOverlayEnabled), 'checked');
+  setControlValueIfIdle(dom.automationCompactHud, Boolean(overlayState.compactHud), 'checked');
+  setControlValueIfIdle(dom.automationShowActiveBuffsOnly, Boolean(overlayState.showOnlyActiveBuffs), 'checked');
+  setControlValueIfIdle(dom.automationHideHudUnfocused, Boolean(overlayState.hideHudWhenGameUnfocused), 'checked');
+  setControlValueIfIdle(dom.automationHideBuffsUnfocused, Boolean(overlayState.hideBuffOverlayWhenGameUnfocused), 'checked');
+  setControlValueIfIdle(dom.automationAnchorMode, overlayState.anchorMode || 'game-relative');
+  setNestedControlValues({
+    label: dom.automationBuffStigmaLabel,
+    durationSec: dom.automationBuffStigmaDuration,
+    warn1Sec: dom.automationBuffStigmaWarn1,
+    warn2Sec: dom.automationBuffStigmaWarn2,
+  }, buffs.stigma || {});
+  setNestedControlValues({
+    label: dom.automationBuffShieldLabel,
+    durationSec: dom.automationBuffShieldDuration,
+    warn1Sec: dom.automationBuffShieldWarn1,
+    warn2Sec: dom.automationBuffShieldWarn2,
+  }, buffs.shield || {});
+  setNestedControlValues({
+    label: dom.automationBuffInvisibilityLabel,
+    durationSec: dom.automationBuffInvisibilityDuration,
+    warn1Sec: dom.automationBuffInvisibilityWarn1,
+    warn2Sec: dom.automationBuffInvisibilityWarn2,
+  }, buffs.invisibility || {});
+  setControlValueIfIdle(dom.automationBuffStigmaVisible, Boolean(buffs.stigma?.visibleInOverlay), 'checked');
+  setControlValueIfIdle(dom.automationBuffShieldVisible, Boolean(buffs.shield?.visibleInOverlay), 'checked');
+  setControlValueIfIdle(dom.automationBuffInvisibilityVisible, Boolean(buffs.invisibility?.visibleInOverlay), 'checked');
+  setControlValueIfIdle(dom.automationHotkeyMaster, hotkeys.masterToggle?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyEmergency, hotkeys.emergencyStop?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyLeft, hotkeys.leftToggle?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyRight, hotkeys.rightToggle?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyF7, hotkeys.f7Toggle?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyShift, hotkeys.shiftToggle?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyCtrl, hotkeys.ctrlToggle?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyStigma, hotkeys.stigmaActivate?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyShield, hotkeys.shieldActivate?.binding || '');
+  setControlValueIfIdle(dom.automationHotkeyInvisibility, hotkeys.invisibilityActivate?.binding || '');
+  if (dom.automationToggleLeft) dom.automationToggleLeft.textContent = `Left ${runtimeState.leftClickerEnabled ? 'ON' : 'OFF'}`;
+  if (dom.automationToggleRight) dom.automationToggleRight.textContent = `Right ${runtimeState.rightClickerEnabled ? 'ON' : 'OFF'}`;
+  if (dom.automationToggleF7) dom.automationToggleF7.textContent = `F7 ${runtimeState.f7Enabled ? 'ON' : 'OFF'}`;
+  if (dom.automationToggleShift) dom.automationToggleShift.textContent = `Shift ${runtimeState.shiftHeldEnabled ? 'ON' : 'OFF'}`;
+  if (dom.automationToggleCtrl) dom.automationToggleCtrl.textContent = `Ctrl ${runtimeState.ctrlHeldEnabled ? 'ON' : 'OFF'}`;
+
+  if (dom.automationProfile) {
+    const profiles = nextState.profilesSummary || [];
+    const previous = dom.automationProfile.value;
+    dom.automationProfile.innerHTML = profiles
+      .map(profile => `<option value="${escHtml(profile.id)}">${escHtml(profile.name)}</option>`)
+      .join('');
+    dom.automationProfile.value = nextState.activeProfileId || previous;
+  }
+
+  if (dom.automationBuffList) {
+    const activeProfile = nextState.activeProfile || {};
+    const configuredBuffs = activeProfile.buffs || {};
+    const runtimeBuffs = nextState.buffRuntimeState || {};
+    dom.automationBuffList.innerHTML = Object.keys(configuredBuffs).map(buffId => {
+      const config = configuredBuffs[buffId];
+      const runtime = runtimeBuffs[buffId] || {};
+      return `
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-bottom:8px;">
+          <div>
+            <div style="font-size:11px;color:var(--text);">${escHtml(config.label)}</div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);">${escHtml(runtime.displayText || 'OFF')}</div>
+          </div>
+          <button class="btn-primary automation-buff-toggle" data-buff-id="${escHtml(buffId)}" style="padding:6px 8px;">${runtime.active ? 'Stop' : 'Start'}</button>
+          <button class="btn-clear automation-buff-pause" data-buff-id="${escHtml(buffId)}" style="padding:6px 8px;">${runtime.paused ? 'Resume' : 'Pause'}</button>
+        </div>
+      `;
+    }).join('');
+
+    dom.automationBuffList.querySelectorAll('.automation-buff-toggle').forEach(button => {
+      button.addEventListener('click', async () => {
+        const buffId = button.dataset.buffId;
+        await window.electronAPI?.automation?.toggleBuff?.(buffId);
+        pushAutomationLog(`buff ${buffId} toggled`);
+        void refreshAutomationState();
+      });
+    });
+
+    dom.automationBuffList.querySelectorAll('.automation-buff-pause').forEach(button => {
+      button.addEventListener('click', async () => {
+        const buffId = button.dataset.buffId;
+        await window.electronAPI?.automation?.pauseBuff?.(buffId);
+        pushAutomationLog(`buff ${buffId} pause toggled`);
+        void refreshAutomationState();
+      });
+    });
+  }
+
+  if (nextState.lastError?.message) {
+    pushAutomationLog(`error: ${nextState.lastError.message}`);
+  }
+}
+
+async function refreshAutomationState() {
+  if (!window.electronAPI?.automation?.getState) return;
+  try {
+    const currentState = await window.electronAPI.automation.getState();
+    renderAutomationState(currentState);
+  } catch (error) {
+    pushAutomationLog(`refresh failed: ${error.message}`);
+  }
+}
+
+async function runAutomationTest(action) {
+  try {
+    const result = await window.electronAPI?.automation?.testAction?.(action, {});
+    if (result?.ok) {
+      pushAutomationLog(`test ${action}: ok`);
+      setStatus(`Automation test ${action} sent`, 'ok');
+    } else {
+      pushAutomationLog(`test ${action}: ${result?.error?.message || 'failed'}`);
+      setStatus(`Automation test ${action} failed`, 'warn');
+    }
+  } catch (error) {
+    pushAutomationLog(`test ${action}: ${error.message}`);
+    setStatus(`Automation test ${action} error`, 'error');
+  }
+}
+
+async function toggleAutomationRuntime(toggleId, currentValue) {
+  try {
+    await window.electronAPI?.automation?.setRuntimeToggle?.(toggleId, !currentValue);
+    pushAutomationLog(`${toggleId} set to ${!currentValue ? 'on' : 'off'}`);
+    void refreshAutomationState();
+  } catch (error) {
+    pushAutomationLog(`${toggleId} failed: ${error.message}`);
+    setStatus(`Automation toggle ${toggleId} failed`, 'error');
+  }
+}
+
+dom.automationRefreshBtn?.addEventListener('click', () => { void refreshAutomationState(); });
+dom.automationRestartBtn?.addEventListener('click', async () => {
+  await window.electronAPI?.automation?.restartHelper?.();
+  pushAutomationLog('helper restart requested');
+  void refreshAutomationState();
+});
+dom.automationMasterBtn?.addEventListener('click', async () => {
+  const nextValue = !state.automationState?.runtimeState?.masterEnabled;
+  await window.electronAPI?.automation?.setMasterEnabled?.(nextValue);
+  pushAutomationLog(`master set to ${nextValue ? 'on' : 'off'}`);
+  void refreshAutomationState();
+});
+dom.automationStopBtn?.addEventListener('click', async () => {
+  await window.electronAPI?.automation?.emergencyStop?.();
+  pushAutomationLog('emergency stop requested');
+  void refreshAutomationState();
+});
+dom.automationToggleLeft?.addEventListener('click', () => {
+  void toggleAutomationRuntime('leftClickerEnabled', Boolean(state.automationState?.runtimeState?.leftClickerEnabled));
+});
+dom.automationToggleRight?.addEventListener('click', () => {
+  void toggleAutomationRuntime('rightClickerEnabled', Boolean(state.automationState?.runtimeState?.rightClickerEnabled));
+});
+dom.automationToggleF7?.addEventListener('click', () => {
+  void toggleAutomationRuntime('f7Enabled', Boolean(state.automationState?.runtimeState?.f7Enabled));
+});
+dom.automationToggleShift?.addEventListener('click', () => {
+  void toggleAutomationRuntime('shiftHeldEnabled', Boolean(state.automationState?.runtimeState?.shiftHeldEnabled));
+});
+dom.automationToggleCtrl?.addEventListener('click', () => {
+  void toggleAutomationRuntime('ctrlHeldEnabled', Boolean(state.automationState?.runtimeState?.ctrlHeldEnabled));
+});
+dom.automationProfile?.addEventListener('change', async () => {
+  if (!dom.automationProfile.value) return;
+  await window.electronAPI?.automation?.setActiveProfile?.(dom.automationProfile.value);
+  pushAutomationLog(`active profile set to ${dom.automationProfile.selectedOptions[0]?.textContent || dom.automationProfile.value}`);
+  void refreshAutomationState();
+});
+dom.automationProfileNew?.addEventListener('click', async () => {
+  await window.electronAPI?.automation?.createProfile?.({ name: `Profile ${new Date().toLocaleTimeString()}` });
+  pushAutomationLog('profile created');
+  void refreshAutomationState();
+});
+dom.automationProfileDelete?.addEventListener('click', async () => {
+  if (!state.automationState?.activeProfileId) return;
+  try {
+    await window.electronAPI?.automation?.deleteProfile?.(state.automationState.activeProfileId);
+    pushAutomationLog('profile deleted');
+    void refreshAutomationState();
+  } catch (error) {
+    pushAutomationLog(`delete profile failed: ${error.message}`);
+  }
+});
+dom.automationProfileExport?.addEventListener('click', async () => {
+  const filePath = await window.electronAPI?.automation?.exportProfileDialog?.();
+  if (filePath) {
+    pushAutomationLog(`profile exported to ${filePath}`);
+    setStatus('Automation profile exported', 'ok');
+  }
+});
+dom.automationProfileImport?.addEventListener('click', async () => {
+  const imported = await window.electronAPI?.automation?.importProfileDialog?.();
+  if (Array.isArray(imported) && imported.length) {
+    pushAutomationLog(`imported ${imported.length} profile(s)`);
+    setStatus('Automation profiles imported', 'ok');
+    void refreshAutomationState();
+  }
+});
+dom.automationSaveRuntime?.addEventListener('click', async () => {
+  const activeProfileId = state.automationState?.activeProfileId;
+  const activeProfile = state.automationState?.activeProfile;
+  if (!activeProfileId || !activeProfile) return;
+  await window.electronAPI?.automation?.updateProfile?.(activeProfileId, {
+    runtime: {
+      ...activeProfile.runtime,
+      leftClickIntervalMs: parseInt(dom.automationLeftInterval.value, 10) || activeProfile.runtime.leftClickIntervalMs,
+      rightClickIntervalMs: parseInt(dom.automationRightInterval.value, 10) || activeProfile.runtime.rightClickIntervalMs,
+      f7IntervalMs: parseInt(dom.automationF7Interval.value, 10) || activeProfile.runtime.f7IntervalMs,
+      jitterPercent: parseInt(dom.automationJitter.value, 10) || activeProfile.runtime.jitterPercent,
+    },
+  });
+  pushAutomationLog('runtime settings saved');
+  void refreshAutomationState();
+});
+dom.automationSaveProfileTarget?.addEventListener('click', async () => {
+  const activeProfileId = state.automationState?.activeProfileId;
+  const activeProfile = state.automationState?.activeProfile;
+  if (!activeProfileId || !activeProfile) return;
+  await window.electronAPI?.automation?.updateProfile?.(activeProfileId, {
+    name: dom.automationProfileName.value.trim() || activeProfile.name,
+    description: dom.automationProfileDescription.value.trim(),
+    gameTarget: {
+      ...activeProfile.gameTarget,
+      windowTitlePattern: dom.automationTargetTitle.value.trim() || activeProfile.gameTarget.windowTitlePattern,
+      matchMode: dom.automationTargetMatchMode.value,
+      processName: dom.automationTargetProcessName.value.trim(),
+      requireForegroundForInput: Boolean(dom.automationTargetRequireForeground.checked),
+      windowPollIntervalMs: parseInt(dom.automationTargetPollInterval.value, 10) || activeProfile.gameTarget.windowPollIntervalMs,
+    },
+  });
+  pushAutomationLog('profile target saved');
+  void refreshAutomationState();
+});
+dom.automationSaveBuffs?.addEventListener('click', async () => {
+  const activeProfileId = state.automationState?.activeProfileId;
+  const activeProfile = state.automationState?.activeProfile;
+  if (!activeProfileId || !activeProfile) return;
+  await window.electronAPI?.automation?.updateProfile?.(activeProfileId, {
+    buffs: {
+      ...activeProfile.buffs,
+      stigma: {
+        ...activeProfile.buffs.stigma,
+        label: dom.automationBuffStigmaLabel.value.trim() || activeProfile.buffs.stigma.label,
+        durationSec: parseInt(dom.automationBuffStigmaDuration.value, 10) || activeProfile.buffs.stigma.durationSec,
+        warn1Sec: parseInt(dom.automationBuffStigmaWarn1.value, 10) || activeProfile.buffs.stigma.warn1Sec,
+        warn2Sec: parseInt(dom.automationBuffStigmaWarn2.value, 10) || activeProfile.buffs.stigma.warn2Sec,
+        visibleInOverlay: Boolean(dom.automationBuffStigmaVisible.checked),
+      },
+      shield: {
+        ...activeProfile.buffs.shield,
+        label: dom.automationBuffShieldLabel.value.trim() || activeProfile.buffs.shield.label,
+        durationSec: parseInt(dom.automationBuffShieldDuration.value, 10) || activeProfile.buffs.shield.durationSec,
+        warn1Sec: parseInt(dom.automationBuffShieldWarn1.value, 10) || activeProfile.buffs.shield.warn1Sec,
+        warn2Sec: parseInt(dom.automationBuffShieldWarn2.value, 10) || activeProfile.buffs.shield.warn2Sec,
+        visibleInOverlay: Boolean(dom.automationBuffShieldVisible.checked),
+      },
+      invisibility: {
+        ...activeProfile.buffs.invisibility,
+        label: dom.automationBuffInvisibilityLabel.value.trim() || activeProfile.buffs.invisibility.label,
+        durationSec: parseInt(dom.automationBuffInvisibilityDuration.value, 10) || activeProfile.buffs.invisibility.durationSec,
+        warn1Sec: parseInt(dom.automationBuffInvisibilityWarn1.value, 10) || activeProfile.buffs.invisibility.warn1Sec,
+        warn2Sec: parseInt(dom.automationBuffInvisibilityWarn2.value, 10) || activeProfile.buffs.invisibility.warn2Sec,
+        visibleInOverlay: Boolean(dom.automationBuffInvisibilityVisible.checked),
+      },
+    },
+  });
+  pushAutomationLog('buff configuration saved');
+  void refreshAutomationState();
+});
+dom.automationSaveHotkeys?.addEventListener('click', async () => {
+  const activeProfileId = state.automationState?.activeProfileId;
+  const activeProfile = state.automationState?.activeProfile;
+  if (!activeProfileId || !activeProfile) return;
+  const withBinding = (entry, binding) => ({
+    ...entry,
+    binding,
+    enabled: Boolean(binding),
+  });
+  await window.electronAPI?.automation?.updateProfile?.(activeProfileId, {
+    hotkeys: {
+      ...activeProfile.hotkeys,
+      masterToggle: withBinding(activeProfile.hotkeys.masterToggle, dom.automationHotkeyMaster.value),
+      emergencyStop: withBinding(activeProfile.hotkeys.emergencyStop, dom.automationHotkeyEmergency.value),
+      leftToggle: withBinding(activeProfile.hotkeys.leftToggle, dom.automationHotkeyLeft.value),
+      rightToggle: withBinding(activeProfile.hotkeys.rightToggle, dom.automationHotkeyRight.value),
+      f7Toggle: withBinding(activeProfile.hotkeys.f7Toggle, dom.automationHotkeyF7.value),
+      shiftToggle: withBinding(activeProfile.hotkeys.shiftToggle, dom.automationHotkeyShift.value),
+      ctrlToggle: withBinding(activeProfile.hotkeys.ctrlToggle, dom.automationHotkeyCtrl.value),
+      stigmaActivate: withBinding(activeProfile.hotkeys.stigmaActivate, dom.automationHotkeyStigma.value),
+      shieldActivate: withBinding(activeProfile.hotkeys.shieldActivate, dom.automationHotkeyShield.value),
+      invisibilityActivate: withBinding(activeProfile.hotkeys.invisibilityActivate, dom.automationHotkeyInvisibility.value),
+    },
+  });
+  pushAutomationLog('hotkeys saved');
+  void refreshAutomationState();
+});
+dom.automationSaveOverlays?.addEventListener('click', async () => {
+  const activeProfileId = state.automationState?.activeProfileId;
+  const activeProfile = state.automationState?.activeProfile;
+  if (!activeProfileId || !activeProfile) return;
+  await window.electronAPI?.automation?.updateProfile?.(activeProfileId, {
+    overlays: {
+      ...activeProfile.overlays,
+      hudEnabled: Boolean(dom.automationHudEnabled.checked),
+      buffOverlayEnabled: Boolean(dom.automationBuffsEnabled.checked),
+      compactHud: Boolean(dom.automationCompactHud.checked),
+      showOnlyActiveBuffs: Boolean(dom.automationShowActiveBuffsOnly.checked),
+      hideHudWhenGameUnfocused: Boolean(dom.automationHideHudUnfocused.checked),
+      hideBuffOverlayWhenGameUnfocused: Boolean(dom.automationHideBuffsUnfocused.checked),
+      anchorMode: dom.automationAnchorMode.value,
+    },
+  });
+  pushAutomationLog('overlay preferences saved');
+  void refreshAutomationState();
+});
+dom.automationTestLeft?.addEventListener('click', () => { void runAutomationTest('leftClick'); });
+dom.automationTestRight?.addEventListener('click', () => { void runAutomationTest('rightClick'); });
+dom.automationTestF7?.addEventListener('click', () => { void runAutomationTest('f7Press'); });
+dom.automationTestRelease?.addEventListener('click', () => { void runAutomationTest('releaseModifiers'); });
+
+if (window.electronAPI?.automation) {
+  window.electronAPI.automation.onStateChanged(nextState => renderAutomationState(nextState));
+  window.electronAPI.automation.onHelperStatus(status => {
+    pushAutomationLog(`helper ${status.lifecycle}${status.lastError?.code ? ` (${status.lastError.code})` : ''}`);
+    if (state.automationState) {
+      renderAutomationState({ ...state.automationState, helperStatus: status });
+    }
+  });
+  window.electronAPI.automation.onDiagnosticLog(entry => {
+    pushAutomationLog(typeof entry?.message === 'string' ? entry.message : JSON.stringify(entry));
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 (async function init() {
@@ -1062,4 +1567,5 @@ dom.resetPositionBtn.addEventListener('click', () => {
   const savedOpacity = localStorage.getItem('opacity');
   if (savedOpacity) applyOpacity(parseInt(savedOpacity));
   await Promise.allSettled([ensureFilterMeta(), ensureMapImage(), ensurePool(), updateMinimapSide()]);
+  await refreshAutomationState();
 })();

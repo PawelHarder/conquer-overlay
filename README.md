@@ -15,6 +15,7 @@ An always-on-top transparent overlay for **Classic Conquer Online** (`conqueronl
 | **Manual Search** | Search by name, category, quality, max price |
 | **Click-through** | Window is fully transparent to mouse by default — hold `Alt` to interact |
 | **Collapse** | Press `Alt+C` or click ▲ to collapse to title bar only |
+| **Automation Scaffold** | Development-stage automation service with profiles, helper diagnostics, runtime toggles, buff timers, and helper-driven overlay windows |
 
 ---
 
@@ -131,3 +132,10 @@ If OCR is too unreliable (pixel fonts can be tricky), a more robust approach is 
 - The overlay uses `alwaysOnTop: 'screen-saver'` — the highest z-order level in Windows, which keeps it above the game even in fullscreen-windowed mode
 - Market data freshness can be checked via `/api/v1/sync/status`
 - The deal watch polls at the configured interval (default 15s) — don't set it too low or you may get rate-limited
+
+## Automation Status
+
+- The repository now includes a development-stage automation subsystem in the Electron app plus a PowerShell helper spike under `native-helper/`.
+- Current implementation covers profile persistence, helper supervision, runtime toggles, buff timer state, helper diagnostics, dedicated HUD/buff overlay windows, and helper-side hotkey polling for the default bindings.
+- The current helper is still a spike, not the final native executable. The long-term target remains a dedicated Windows helper binary.
+- Packaged builds now include the `native-helper/` directory so the helper assets are available outside the repository.

@@ -33,6 +33,15 @@
       "src/**/*",
       "assets/**/*",
       "public/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "native-helper",
+        "to": "native-helper",
+        "filter": [
+          "**/*"
+        ]
+      }
     ]
   }
 }
