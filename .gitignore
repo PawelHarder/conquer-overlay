@@ -4,3 +4,6 @@ debug/
 data/
 collector/*.db
 *.log
+
+# Rust build artifacts
+native-helper/conquer-helper/target/

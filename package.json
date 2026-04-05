@@ -8,7 +8,11 @@
     "start:admin": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$project = (Resolve-Path '.').Path; $electron = (Resolve-Path '.\\node_modules\\electron\\dist\\electron.exe').Path; Start-Process -Verb RunAs -FilePath $electron -ArgumentList @($project) -WorkingDirectory $project\"",
     "dev": "electron . --dev",
     "dev:admin": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$project = (Resolve-Path '.').Path; $electron = (Resolve-Path '.\\node_modules\\electron\\dist\\electron.exe').Path; Start-Process -Verb RunAs -FilePath $electron -ArgumentList @($project, '--dev') -WorkingDirectory $project\"",
-    "build": "electron-builder"
+    "build": "electron-builder --win --linux --x64",
+    "build:win": "electron-builder --win --x64",
+    "build:linux": "electron-builder --linux --x64",
+    "build:helper:linux": "cargo build --release --manifest-path native-helper/conquer-helper/Cargo.toml",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "axios": "^1.6.0",
@@ -25,23 +29,54 @@
   "build": {
     "appId": "com.classicconquer.overlay",
     "productName": "Conquer Overlay",
-    "win": {
-      "requestedExecutionLevel": "requireAdministrator",
-      "target": "nsis"
+    "directories": {
+      "output": "dist"
     },
+    "beforePack": "scripts/before-pack.js",
     "files": [
       "src/**/*",
       "assets/**/*",
-      "public/**/*"
+      "public/**/*",
+      "collector/**/*",
+      "!collector/*.db"
     ],
-    "extraResources": [
-      {
-        "from": "native-helper",
-        "to": "native-helper",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ]
+    "win": {
+      "requestedExecutionLevel": "requireAdministrator",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "extraResources": [
+        {
+          "from": "native-helper",
+          "to": "native-helper",
+          "filter": ["conquer-helper-spike.ps1", "README.md"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Conquer Overlay"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ],
+      "category": "Utility",
+      "executableName": "conquer-overlay",
+      "extraResources": [
+        {
+          "from": "native-helper/conquer-helper/target/release",
+          "to": "native-helper",
+          "filter": ["conquer-helper"]
+        }
+      ]
+    },
+    "deb": {
+      "depends": ["libx11-6", "libxtst6", "libxi6", "libxrandr2", "libxcb1"]
+    }
   }
 }
