@@ -6,9 +6,8 @@ const { ProfileStore } = require('./profile-store');
 const { AutomationHelperClient } = require('./automation-helper-client');
 const { AutomationService } = require('./automation-service');
 const { createHudWindow } = require('./hud-window');
+const { requestMarket } = require('./main/market-client');
 
-const MARKET_BASE_URL = 'https://conqueronline.net';
-const MARKET_REQUEST_TIMEOUT_MS = 10000;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!hasSingleInstanceLock) {
@@ -106,6 +105,7 @@ function buildDbConditions(filters = {}) {
 
   const {
     itemName,
+    majorClass,
     minorClass,
     quality,
     plusLevel,
@@ -117,6 +117,10 @@ function buildDbConditions(filters = {}) {
   if (itemName) {
     conditions.push("attribute_name LIKE '%' || @itemName || '%'");
     params.itemName = itemName;
+  }
+  if (majorClass) {
+    conditions.push('major_class = @majorClass');
+    params.majorClass = majorClass;
   }
   if (minorClass) {
     conditions.push('minor_class = @minorClass');
@@ -185,50 +189,7 @@ function queryWatchBaselineData(filters = {}) {
   return queryDbExternally('baseline', filters);
 }
 
-function buildMarketUrl(requestPath, params = {}) {
-  if (typeof requestPath !== 'string' || !requestPath.startsWith('/Community/')) {
-    throw new Error('Invalid market path');
-  }
-
-  const url = new URL(requestPath, MARKET_BASE_URL);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, value);
-    }
-  });
-
-  return url;
-}
-
-async function requestMarket(requestPath, params = {}, responseType = 'json') {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), MARKET_REQUEST_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(buildMarketUrl(requestPath, params), {
-      headers: {
-        Accept: responseType === 'text' ? 'application/json, text/plain, */*' : 'application/json',
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
-      throw new Error(`Market API error ${res.status}: ${requestPath}`);
-    }
-
-    return responseType === 'text'
-      ? (await res.text()).trim()
-      : await res.json();
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new Error(`Market API timeout: ${requestPath}`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
+// ── Overlay state / window helpers ──────────────────────────────────────────
 
 function getOverlayStatePath() {
   return path.join(app.getPath('userData'), 'overlay-state.json');

@@ -68,12 +68,28 @@
     .server-btn:hover { color: var(--text); border-color: var(--gold-dim); }
     .server-btn.active { background: var(--border-gold); color: var(--gold); border-color: var(--gold-dim); }
 
-    /* ── Listings: 4-column grid ── */
+    /* ── Listings: 5-column grid ── */
     .listings-header,
     .listing-row {
-      grid-template-columns: 1fr 72px 64px 88px;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 64px 46px 76px;
+      gap: 0 6px;
     }
     .listing-row { cursor: pointer; }
+    .listing-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-bright);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .listing-seller {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .listing-pos {
       font-family: var(--mono);
       font-size: 10px;
@@ -88,10 +104,23 @@
     .listings-header span.sort-desc::after { content: ' ▼'; color: var(--gold); }
 
     /* ── Result containers scrollable ── */
+    .listings-wrap {
+      overflow-y: auto;
+      max-height: 250px;
+      margin-bottom: 8px;
+    }
+    .listings-wrap::-webkit-scrollbar { width: 4px; }
+    .listings-wrap::-webkit-scrollbar-track { background: var(--bg-deep); }
+    .listings-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .listings-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--bg-panel);
+    }
     #search-results,
     #watch-matches {
-      max-height: 220px;
-      overflow-y: auto;
+      overflow: visible;
     }
 
     /* ── Price input formatted ── */
@@ -421,6 +450,19 @@
     }
     .tab:hover { color: var(--text); }
     .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+    #btn-settings-tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 8px 10px;
+      font-size: 16px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    #btn-settings-tab:hover { color: var(--text); }
+    #btn-settings-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
 
     /* ── Tab Content ── */
     #content {
@@ -546,8 +588,6 @@
     /* ── Listings Table ── */
     .listings-header {
       display: grid;
-      grid-template-columns: 1fr 80px 100px;
-      gap: 4px;
       padding: 4px 8px;
       font-size: 10px;
       letter-spacing: 1px;
@@ -559,16 +599,15 @@
 
     .listing-row {
       display: grid;
-      grid-template-columns: 1fr 80px 100px;
-      gap: 4px;
-      padding: 6px 8px;
+      padding: 5px 8px;
       background: var(--bg-card);
       border: 1px solid transparent;
       border-radius: 3px;
       margin-bottom: 2px;
-      transition: all 0.1s;
-      cursor: default;
+      transition: border-color 0.1s, background 0.1s;
+      cursor: pointer;
     }
+    .listing-row:nth-child(even) { background: var(--bg-deep); }
     .listing-row:hover { border-color: var(--border); background: var(--bg-hover); }
     .listing-row.pinned {
       border-color: var(--gold-dim);
@@ -576,16 +615,19 @@
     }
 
     .listing-seller {
-      font-size: 12px;
-      color: var(--text);
+      font-size: 11px;
+      color: var(--text-dim);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .listing-quality {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-dim);
       text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .listing-price {
       font-family: var(--mono);
@@ -785,9 +827,10 @@
   <!-- Tab Bar -->
   <div id="tabs">
     <div class="tab active" data-tab="search">Search</div>
-    <div class="tab" data-tab="history">History</div>
     <div class="tab" data-tab="watch">Watch</div>
-    <div class="tab" data-tab="settings">Settings</div>
+    <div class="tab" data-tab="history">History</div>
+    <div class="tab" data-tab="autoclicker">Clicker</div>
+    <button id="btn-settings-tab">⚙</button>
   </div>
 
   <!-- Server Selector Bar -->
@@ -894,7 +937,9 @@
       </div>
 
       <div class="section-label">Results <span id="search-count" style="color:var(--text-dim)"></span></div>
+      <div class="listings-wrap">
       <div class="listings-header">
+        <span data-sort="AttributeName">Item</span>
         <span data-sort="SellerName">Seller</span>
         <span data-sort="QualityName" style="text-align:center">Quality</span>
         <span data-sort="pos" style="text-align:center">Loc</span>
@@ -902,6 +947,7 @@
       </div>
       <div id="search-results">
         <div class="placeholder-text">Enter search terms above</div>
+      </div>
       </div>
 
       <div class="minimap-wrap">
@@ -922,13 +968,22 @@
           </div>
         </div>
 
-        <div class="filter-grid-3">
+        <div class="filter-grid-2">
+          <div class="field-group">
+            <div class="field-label">Category</div>
+            <select id="history-major">
+              <option value="">Any Category</option>
+            </select>
+          </div>
           <div class="field-group">
             <div class="field-label">Minor Class</div>
             <select id="history-minor">
               <option value="">Any Minor Class</option>
             </select>
           </div>
+        </div>
+
+        <div class="filter-grid-3">
           <div class="field-group">
             <div class="field-label">Quality</div>
             <select id="history-quality">
@@ -941,9 +996,6 @@
               <option value="">Any Plus</option>
             </select>
           </div>
-        </div>
-
-        <div class="filter-grid-2">
           <div class="field-group">
             <div class="field-label">Sockets</div>
             <select id="history-sockets">
@@ -953,14 +1005,11 @@
               <option value="2">2 sockets</option>
             </select>
           </div>
-          <div class="field-group">
-            <div class="field-label">&nbsp;</div>
-            <button class="btn-primary" id="history-search-btn">Load</button>
-          </div>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;">
+        <div style="display:flex;justify-content:flex-end;gap:6px;">
           <button class="btn-clear" id="history-clear">Clear</button>
+          <button class="btn-primary" id="history-search-btn">Load</button>
         </div>
       </div>
 
@@ -1009,13 +1058,22 @@
           </div>
         </div>
 
-        <div class="filter-grid-3">
+        <div class="filter-grid-2">
+          <div class="field-group">
+            <div class="field-label">Category</div>
+            <select id="watch-major">
+              <option value="">Any Category</option>
+            </select>
+          </div>
           <div class="field-group">
             <div class="field-label">Minor Class</div>
             <select id="watch-minor">
               <option value="">Any Minor Class</option>
             </select>
           </div>
+        </div>
+
+        <div class="filter-grid-3">
           <div class="field-group">
             <div class="field-label">Quality</div>
             <select id="watch-quality">
@@ -1028,9 +1086,6 @@
               <option value="">Any Plus</option>
             </select>
           </div>
-        </div>
-
-        <div class="filter-grid-2">
           <div class="field-group">
             <div class="field-label">Sockets</div>
             <select id="watch-sockets">
@@ -1039,6 +1094,20 @@
               <option value="1">1 socket</option>
               <option value="2">2 sockets</option>
             </select>
+          </div>
+        </div>
+
+        <div class="filter-grid-3">
+          <div class="field-group">
+            <div class="field-label">Min Price</div>
+            <div class="price-input-wrap">
+              <input type="text" id="watch-minprice" placeholder="No minimum" autocomplete="off" />
+              <span class="currency-hint">gold</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Min Listings</div>
+            <input type="number" id="watch-mincount" placeholder="1" min="1" max="99" />
           </div>
           <div class="field-group">
             <div class="field-label">Poll Interval</div>
@@ -1088,7 +1157,9 @@
       </div>
 
       <div class="section-label">Match History</div>
+      <div class="listings-wrap">
       <div class="listings-header">
+        <span data-sort="AttributeName">Item</span>
         <span data-sort="SellerName">Seller</span>
         <span data-sort="QualityName" style="text-align:center">Quality</span>
         <span data-sort="pos" style="text-align:center">Loc</span>
@@ -1097,31 +1168,16 @@
       <div id="watch-matches">
         <div class="placeholder-text">Matches will appear here</div>
       </div>
+      </div>
 
       <div class="minimap-wrap">
         <canvas id="watch-minimap" width="240" height="160"></canvas>
       </div>
     </div>
 
-    <!-- ── Settings ── -->
-    <div class="tab-panel" id="tab-settings">
+    <!-- ── Autoclicker ── -->
+    <div class="tab-panel" id="tab-autoclicker">
 
-      <div class="section-label">Display</div>
-
-      <div class="setting-row">
-        <label>Transparency</label>
-        <input type="range" id="opacity-slider" min="10" max="100" value="100" />
-        <input type="number" id="opacity-input" min="10" max="100" value="100" style="width:56px" />
-        <span style="font-size:10px;color:var(--text-dim)">%</span>
-      </div>
-
-      <div class="section-label">Window</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">
-        Position is saved automatically when you move the window.
-      </div>
-      <button class="btn-primary" id="reset-position-btn" style="width:100%">Reset Window Position</button>
-
-      <div class="section-label" style="margin-top:14px;">Automation</div>
       <div class="automation-card">
         <div class="setting-row" style="margin-bottom:10px;">
           <label>Profile</label>
@@ -1163,6 +1219,49 @@
       </div>
 
       <div class="automation-card">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Buff Timers</div>
+        <div id="automation-buff-list"></div>
+      </div>
+
+      <div class="automation-card">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Helper Test Actions</div>
+        <div class="automation-actions compact">
+          <button class="btn-primary" id="automation-test-left">Left</button>
+          <button class="btn-primary" id="automation-test-right">Right</button>
+          <button class="btn-primary" id="automation-test-f7">F7</button>
+          <button class="btn-primary" id="automation-test-release">Release</button>
+        </div>
+      </div>
+
+      <div class="automation-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);">Diagnostics</div>
+          <button class="btn-secondary" id="automation-copy-log" style="padding:3px 8px;font-size:10px;">Copy</button>
+        </div>
+        <div class="automation-log" id="automation-log">Waiting for automation state…</div>
+      </div>
+
+    </div>
+
+    <!-- ── Settings ── -->
+    <div class="tab-panel" id="tab-settings">
+
+      <div class="section-label">Display</div>
+
+      <div class="setting-row">
+        <label>Transparency</label>
+        <input type="range" id="opacity-slider" min="10" max="100" value="100" />
+        <input type="number" id="opacity-input" min="10" max="100" value="100" style="width:56px" />
+        <span style="font-size:10px;color:var(--text-dim)">%</span>
+      </div>
+
+      <div class="section-label">Window</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">
+        Position is saved automatically when you move the window.
+      </div>
+      <button class="btn-primary" id="reset-position-btn" style="width:100%">Reset Window Position</button>
+
+      <div class="automation-card" style="margin-top:14px;">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Runtime Settings</div>
         <div class="setting-row"><label>Left ms</label><input type="number" id="automation-left-interval" min="1" value="80" /></div>
         <div class="setting-row"><label>Right ms</label><input type="number" id="automation-right-interval" min="1" value="120" /></div>
@@ -1255,28 +1354,6 @@
         <button class="btn-primary" id="automation-save-overlays" style="width:100%;margin-top:4px;">Save Overlay Preferences</button>
       </div>
 
-      <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Helper Test Actions</div>
-        <div class="automation-actions compact">
-          <button class="btn-primary" id="automation-test-left">Left</button>
-          <button class="btn-primary" id="automation-test-right">Right</button>
-          <button class="btn-primary" id="automation-test-f7">F7</button>
-          <button class="btn-primary" id="automation-test-release">Release</button>
-        </div>
-      </div>
-
-      <div class="automation-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
-          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);">Diagnostics</div>
-          <button class="btn-secondary" id="automation-copy-log" style="padding:3px 8px;font-size:10px;">Copy</button>
-        </div>
-        <div class="automation-log" id="automation-log">Waiting for automation state…</div>
-      </div>
-
-      <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Buff Timers</div>
-        <div id="automation-buff-list"></div>
-      </div>
     </div>
 
   </div>
