@@ -83,6 +83,14 @@ function releaseInputModifiersAtStartup() {
 }
 
 function cleanupOrphanAutomationHelpers() {
+  if (process.platform === 'linux') {
+    try {
+      execFileSync('pkill', ['-f', 'conquer-helper'], { encoding: 'utf8' });
+    } catch (_) {
+      // pkill exits 1 when no process matched — ignore.
+    }
+    return;
+  }
   try {
     execFileSync('powershell.exe', [
       '-NoProfile',
@@ -250,8 +258,11 @@ function getAutomationHelperPath() {
     };
   }
 
+  const isLinux = process.platform === 'linux';
+  const exeName = isLinux ? 'conquer-helper' : 'conquer-helper.exe';
+
   if (app.isPackaged) {
-    const packagedHelperExe = path.join(process.resourcesPath, 'native-helper', 'conquer-helper.exe');
+    const packagedHelperExe = path.join(process.resourcesPath, 'native-helper', exeName);
     const packagedHelperScript = path.join(process.resourcesPath, 'native-helper', 'conquer-helper-spike.ps1');
     if (fs.existsSync(packagedHelperExe)) {
       return {
@@ -259,7 +270,7 @@ function getAutomationHelperPath() {
         helperArgs: [],
       };
     }
-    if (fs.existsSync(packagedHelperScript)) {
+    if (!isLinux && fs.existsSync(packagedHelperScript)) {
       return {
         helperPath: packagedHelperScript,
         launchCommand: 'powershell.exe',
@@ -272,17 +283,24 @@ function getAutomationHelperPath() {
     };
   }
 
-  const scriptPath = path.join(__dirname, '../native-helper/conquer-helper-spike.ps1');
-  if (fs.existsSync(scriptPath)) {
-    return {
-      helperPath: scriptPath,
-      launchCommand: 'powershell.exe',
-      launchArgs: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
-    };
+  if (!isLinux) {
+    const scriptPath = path.join(__dirname, '../native-helper/conquer-helper-spike.ps1');
+    if (fs.existsSync(scriptPath)) {
+      return {
+        helperPath: scriptPath,
+        launchCommand: 'powershell.exe',
+        launchArgs: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
+      };
+    }
   }
 
+  // Dev binary: native-helper/conquer-helper/target/release/conquer-helper (Linux)
+  //             native-helper/conquer-helper.exe (Windows fallback)
+  const devBinary = isLinux
+    ? path.join(__dirname, '../native-helper/conquer-helper/target/release/conquer-helper')
+    : path.join(__dirname, '../native-helper/conquer-helper.exe');
   return {
-    helperPath: path.join(__dirname, '../native-helper/conquer-helper.exe'),
+    helperPath: devBinary,
     helperArgs: [],
   };
 }
