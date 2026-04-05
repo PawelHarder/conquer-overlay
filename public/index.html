@@ -325,6 +325,7 @@
       --mono:        Consolas, 'Courier New', monospace;
       --display:     'Palatino Linotype', Georgia, serif;
       --ui:          'Segoe UI', Tahoma, sans-serif;
+      --font-size:   14px;
       --radius:      4px;
       --shadow:      0 8px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(200,168,75,0.15);
     }
@@ -339,7 +340,7 @@
 
     body {
       font-family: var(--ui);
-      font-size: 14px;
+      font-size: var(--font-size);
       color: var(--text);
       background: transparent;
       overflow: hidden;
@@ -1247,6 +1248,17 @@
     <div class="tab-panel" id="tab-settings">
 
       <div class="section-label">Display</div>
+
+      <div class="setting-row">
+        <label>Font Size</label>
+        <select id="font-size-select">
+          <option value="12">Small (12px)</option>
+          <option value="13">Compact (13px)</option>
+          <option value="14" selected>Normal (14px)</option>
+          <option value="15">Large (15px)</option>
+          <option value="16">Larger (16px)</option>
+        </select>
+      </div>
 
       <div class="setting-row">
         <label>Transparency</label>

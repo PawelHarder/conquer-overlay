@@ -121,6 +121,7 @@ const dom = {
   watchText:           $('watch-text'),
   watchMatches:        $('watch-matches'),
 
+  fontSizeSelect:      $('font-size-select'),
   opacitySlider:       $('opacity-slider'),
   opacityInput:        $('opacity-input'),
   resetPositionBtn:    $('reset-position-btn'),
@@ -893,6 +894,15 @@ function showDealAlert(listing) {
 
 // ── Settings Tab ──────────────────────────────────────────────────────────────
 
+function applyFontSize(px) {
+  const clamped = Math.max(10, Math.min(20, parseInt(px) || 14));
+  document.documentElement.style.setProperty('--font-size', clamped + 'px');
+  dom.fontSizeSelect.value = String(clamped);
+  localStorage.setItem('fontSize', String(clamped));
+}
+
+dom.fontSizeSelect.addEventListener('change', () => applyFontSize(dom.fontSizeSelect.value));
+
 function applyOpacity(pct) {
   const clamped = Math.max(10, Math.min(100, pct));
   dom.opacitySlider.value = clamped;
@@ -1333,6 +1343,8 @@ if (window.electronAPI?.automation) {
 (async function init() {
   setAltToggleState(false);
   setStatus('Ready — Press Alt+I or F8 to interact', 'ok');
+  const savedFontSize = localStorage.getItem('fontSize');
+  if (savedFontSize) applyFontSize(savedFontSize);
   const savedOpacity = localStorage.getItem('opacity');
   if (savedOpacity) applyOpacity(parseInt(savedOpacity));
   await Promise.allSettled([ensureFilterMeta(), ensureMapImage(), ensurePool(), updateMinimapSide()]);
