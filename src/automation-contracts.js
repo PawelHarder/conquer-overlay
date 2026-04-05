@@ -54,7 +54,7 @@ const TEST_ACTIONS = new Set([
 const DEFAULT_BUFFS = Object.freeze({
   stigma: Object.freeze({
     id: 'stigma',
-    label: 'STIGMA',
+    label: 'Timer 1',
     durationSec: 80,
     countMode: 'countdown',
     warn1Sec: 10,
@@ -66,7 +66,7 @@ const DEFAULT_BUFFS = Object.freeze({
   }),
   shield: Object.freeze({
     id: 'shield',
-    label: 'SHIELD',
+    label: 'Timer 2',
     durationSec: 80,
     countMode: 'countdown',
     warn1Sec: 10,
@@ -78,7 +78,7 @@ const DEFAULT_BUFFS = Object.freeze({
   }),
   invisibility: Object.freeze({
     id: 'invisibility',
-    label: 'INVISIBILITY',
+    label: 'Timer 3',
     durationSec: 80,
     countMode: 'countdown',
     warn1Sec: 10,
@@ -179,6 +179,8 @@ function normalizeGameTarget(gameTarget = {}) {
   };
 }
 
+const F_KEY_CODES = Object.freeze(['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12']);
+
 function normalizeRuntime(runtime = {}) {
   const source = isPlainObject(runtime) ? runtime : {};
   return {
@@ -189,6 +191,7 @@ function normalizeRuntime(runtime = {}) {
     leftClickIntervalMs: clampInteger(source.leftClickIntervalMs, 80, 1),
     rightClickIntervalMs: clampInteger(source.rightClickIntervalMs, 120, 1),
     f7IntervalMs: clampInteger(source.f7IntervalMs, 500, 1),
+    fKeyCode: F_KEY_CODES.includes(source.fKeyCode) ? source.fKeyCode : 'F7',
     jitterPercent: clampInteger(source.jitterPercent, 15, 0),
     shiftHeldEnabled: normalizeBoolean(source.shiftHeldEnabled, false),
     ctrlHeldEnabled: normalizeBoolean(source.ctrlHeldEnabled, false),
@@ -379,6 +382,7 @@ module.exports = {
   HELPER_CAPABILITIES,
   TEST_ACTIONS,
   DEFAULT_BUFFS,
+  F_KEY_CODES,
   clone,
   createDefaultDocument,
   createDefaultHotkeys,

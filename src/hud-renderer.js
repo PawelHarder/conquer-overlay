@@ -105,3 +105,9 @@ window.electronAPI?.automation?.onStateChanged?.(render);
 window.electronAPI?.automation?.getState?.().then(render).catch(() => {
   dom.root.textContent = 'Automation state unavailable';
 });
+
+// Apply font from main renderer settings
+function applyUiFont(uiCssString) {
+  if (uiCssString) document.documentElement.style.setProperty('--ui', uiCssString);
+}
+window.electronAPI?.onUiFontChanged?.(applyUiFont);

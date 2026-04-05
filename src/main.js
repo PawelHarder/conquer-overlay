@@ -203,6 +203,39 @@ function getOverlayStatePath() {
   return path.join(app.getPath('userData'), 'overlay-state.json');
 }
 
+// ── App hotkeys persistence ──────────────────────────────────────────────────
+
+const DEFAULT_APP_HOTKEYS = Object.freeze({
+  interact: 'F8',
+  collapse: 'Alt+C',
+  hide: 'Alt+H',
+  quit: 'Alt+Q',
+});
+
+let appHotkeysCache = null;
+
+function getAppHotkeysPath() {
+  return path.join(app.getPath('userData'), 'app-hotkeys.json');
+}
+
+function loadAppHotkeys() {
+  if (appHotkeysCache) return appHotkeysCache;
+  try {
+    const raw = JSON.parse(fs.readFileSync(getAppHotkeysPath(), 'utf8'));
+    appHotkeysCache = { ...DEFAULT_APP_HOTKEYS, ...raw };
+  } catch (_) {
+    appHotkeysCache = { ...DEFAULT_APP_HOTKEYS };
+  }
+  return appHotkeysCache;
+}
+
+function saveAppHotkeys(hotkeys) {
+  appHotkeysCache = { ...DEFAULT_APP_HOTKEYS, ...hotkeys };
+  try {
+    fs.writeFileSync(getAppHotkeysPath(), JSON.stringify(appHotkeysCache, null, 2));
+  } catch (_) { /* ignore */ }
+}
+
 function loadOverlayState() {
   if (overlayState) return overlayState;
 
@@ -449,7 +482,7 @@ function createOverlay() {
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: true,
+    resizable: false,
     movable: true,
     hasShadow: false,
     focusable: false,
@@ -532,37 +565,44 @@ async function handoffAutomationFocus(state) {
   return automationService.getState();
 }
 
-function setupAltToggleTracking() {
-  const shortcuts = [
-    ['Alt+C', () => {
-      sendDebugMessage('Alt+C detected');
-      toggleCollapsed();
-    }],
-    ['Alt+H', () => {
-      sendDebugMessage('Alt+H detected');
-      toggleVisibility();
-    }],
-    ['Alt+I', () => {
-      sendDebugMessage('Alt+I detected');
-      setInteractiveMode(!isInteractive);
-    }],
-    ['F8', () => {
-      sendDebugMessage('F8 detected');
-      setInteractiveMode(!isInteractive);
-    }],
-    ['Alt+Q', () => {
-      sendDebugMessage('Alt+Q detected');
-      void shutdownApp();
-    }],
-  ];
+function buildAppShortcutHandlers() {
+  // Maps logical hotkey name → action handler (always fixed)
+  return {
+    interact: () => { sendDebugMessage('interact hotkey detected'); setInteractiveMode(!isInteractive); },
+    collapse: () => { sendDebugMessage('collapse hotkey detected'); toggleCollapsed(); },
+    hide:     () => { sendDebugMessage('hide hotkey detected'); toggleVisibility(); },
+    quit:     () => { sendDebugMessage('quit hotkey detected'); void shutdownApp(); },
+  };
+}
 
-  for (const [accelerator, handler] of shortcuts) {
+function reregisterAppShortcuts(hotkeys) {
+  try { globalShortcut.unregisterAll(); } catch (_) {}
+
+  const handlers = buildAppShortcutHandlers();
+  const registered = new Set();
+
+  for (const [name, accelerator] of Object.entries(hotkeys)) {
+    if (!accelerator || registered.has(accelerator)) continue;
+    const handler = handlers[name];
+    if (!handler) continue;
     try {
       globalShortcut.register(accelerator, handler);
+      registered.add(accelerator);
     } catch (error) {
       sendDebugMessage(`Global shortcut registration failed for ${accelerator}: ${error.message}`);
     }
   }
+
+  // Always ensure Alt+I works as interact toggle (secondary binding)
+  if (!registered.has('Alt+I')) {
+    try {
+      globalShortcut.register('Alt+I', handlers.interact);
+    } catch (_) {}
+  }
+}
+
+function setupAltToggleTracking() {
+  reregisterAppShortcuts(loadAppHotkeys());
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -572,11 +612,6 @@ function toggleCollapsed() {
 
   isCollapsed = !isCollapsed;
   overlayWindow.webContents.send('toggle-collapse', isCollapsed);
-  if (isCollapsed) {
-    overlayWindow.setSize(420, 48, true);
-  } else {
-    overlayWindow.setSize(420, 600, true);
-  }
 }
 
 function toggleVisibility() {
@@ -632,6 +667,15 @@ function setupIPC() {
   ipcMain.on('set-opacity', (_, opacity) => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.setOpacity(Math.max(0.1, Math.min(1, opacity)));
+    }
+  });
+
+  ipcMain.on('set-ui-font', (_, uiCssString) => {
+    if (typeof uiCssString !== 'string') return;
+    for (const win of [automationHudWindow, automationBuffWindow]) {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('ui-font-changed', uiCssString);
+      }
     }
   });
 
@@ -702,6 +746,15 @@ function setupIPC() {
   ipcMain.handle('automation:set-overlay-preferences', (_, changes) => automationService?.setOverlayPreferences(changes ?? {}) ?? null);
   ipcMain.handle('automation:toggle-buff', (_, buffId) => automationService?.toggleBuff(buffId) ?? null);
   ipcMain.handle('automation:pause-buff', (_, buffId) => automationService?.pauseBuff(buffId) ?? null);
+
+  // ── App Hotkeys ───────────────────────────────────────────────────────────
+  ipcMain.handle('get-app-hotkeys', () => loadAppHotkeys());
+  ipcMain.handle('set-app-hotkeys', (_, hotkeys) => {
+    if (!hotkeys || typeof hotkeys !== 'object') return { ok: false };
+    saveAppHotkeys(hotkeys);
+    reregisterAppShortcuts(loadAppHotkeys());
+    return { ok: true };
+  });
   ipcMain.handle('automation:export-profile-dialog', async () => {
     if (!automationService || !overlayWindow) return null;
     const activeProfile = automationService.profileStore.getActiveProfile();

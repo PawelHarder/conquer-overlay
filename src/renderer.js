@@ -35,22 +35,10 @@ const state = {
   automationLog:    [],
   automationHelperLifecycle: '',
   automationHelperErrorCode: '',
+  historyPoints:    [],
+  chartPts:         null,
 };
 
-const AUTOMATION_HOTKEY_OPTIONS = [
-  ['', 'Disabled'],
-  ['MouseMiddle', 'Mouse Middle'],
-  ['Escape', 'Escape'],
-  ['F1', 'F1'],
-  ['F2', 'F2'],
-  ['F3', 'F3'],
-  ['F7', 'F7'],
-  ['Semicolon', 'Semicolon'],
-  ['Quote', 'Quote'],
-  ['Comma', 'Comma'],
-  ['BracketLeft', 'Bracket Left'],
-  ['BracketRight', 'Bracket Right'],
-];
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 
@@ -72,7 +60,6 @@ const dom = {
   searchQuality:       $('search-quality'),
   searchPlus:          $('search-plus'),
   searchSockets:       $('search-sockets'),
-  searchMinPrice:      $('search-minprice'),
   searchMaxPrice:      $('search-maxprice'),
   searchBtn:           $('search-btn'),
   searchClear:         $('search-clear'),
@@ -113,7 +100,6 @@ const dom = {
   watchPricePct:       $('watch-price-pct'),
   watchUseHistoryBtn:  $('watch-use-history-btn'),
   watchPrice:          $('watch-price'),
-  watchMinPrice:       $('watch-minprice'),
   watchMinCount:       $('watch-mincount'),
   watchStartBtn:       $('watch-start-btn'),
   watchClear:          $('watch-clear'),
@@ -125,6 +111,8 @@ const dom = {
   fontPairingSelect:   $('font-pairing-select'),
   opacitySlider:       $('opacity-slider'),
   opacityInput:        $('opacity-input'),
+  textOpacitySlider:   $('text-opacity-slider'),
+  textOpacityInput:    $('text-opacity-input'),
   resetPositionBtn:    $('reset-position-btn'),
   automationProfile:   $('automation-profile-select'),
   automationProfileNew:$('automation-profile-new'),
@@ -207,6 +195,23 @@ const dom = {
   altIndicator:        $('alt-indicator'),
   statusText:          $('status-text'),
   statusDot:           $('status-dot'),
+
+  // New additions
+  automationFkeyCode:              $('automation-fkey-code'),
+  automationBuffStigmaMode:        $('automation-buff-stigma-mode'),
+  automationBuffShieldMode:        $('automation-buff-shield-mode'),
+  automationBuffInvisibilityMode:  $('automation-buff-invisibility-mode'),
+  filterRememberServer:            $('filter-remember-server'),
+  chartExpandBtn:                  $('chart-expand-btn'),
+  chartTooltip:                    $('chart-tooltip'),
+  chartModal:                      $('chart-modal'),
+  chartModalCanvas:                $('chart-modal-canvas'),
+  chartModalClose:                 $('chart-modal-close'),
+  appHotkeyInteract:               $('app-hotkey-interact'),
+  appHotkeyCollapse:               $('app-hotkey-collapse'),
+  appHotkeyHide:                   $('app-hotkey-hide'),
+  appHotkeyQuit:                   $('app-hotkey-quit'),
+  appSaveHotkeys:                  $('app-save-hotkeys'),
 };
 
 initMinimap(dom, state);
@@ -216,7 +221,7 @@ initMinimap(dom, state);
 function formatPrice(n) {
   if (n == null || isNaN(n)) return '—';
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'K';
+  if (n >= 1_000)     return parseFloat((n / 1_000).toFixed(3)) + 'K';
   return String(n);
 }
 
@@ -337,29 +342,6 @@ function setNestedControlValues(controlMap, values, property = 'value') {
   });
 }
 
-function populateAutomationHotkeySelects() {
-  const markup = AUTOMATION_HOTKEY_OPTIONS
-    .map(([value, label]) => `<option value="${escHtml(value)}">${escHtml(label)}</option>`)
-    .join('');
-  [
-    dom.automationHotkeyMaster,
-    dom.automationHotkeyEmergency,
-    dom.automationHotkeyLeft,
-    dom.automationHotkeyRight,
-    dom.automationHotkeyF7,
-    dom.automationHotkeyShift,
-    dom.automationHotkeyCtrl,
-    dom.automationHotkeyStigma,
-    dom.automationHotkeyShield,
-    dom.automationHotkeyInvisibility,
-  ].forEach(select => {
-    if (select && !select.dataset.optionsReady) {
-      select.innerHTML = markup;
-      select.dataset.optionsReady = 'true';
-    }
-  });
-}
-
 // ── Locale-aware Price Inputs ─────────────────────────────────────────────────
 
 const priceFormatter = new Intl.NumberFormat(navigator.language);
@@ -389,10 +371,40 @@ function getRawPrice(input) {
   return parseRawPrice(input.dataset.raw || input.value);
 }
 
-setupPriceInput(dom.searchMinPrice);
-setupPriceInput(dom.searchMaxPrice);
-setupPriceInput(dom.watchPrice);
-setupPriceInput(dom.watchMinPrice);
+// ── Gold Shorthand Parser ─────────────────────────────────────────────────────
+
+function parseGoldShorthand(str) {
+  if (!str) return null;
+  const s = str.trim().toLowerCase().replace(/,/g, '');
+  const match = s.match(/^(\d+(?:\.\d+)?)\s*(k{1,3}|m|b)?$/);
+  if (!match) return null;
+  const num = parseFloat(match[1]);
+  if (isNaN(num)) return null;
+  const suffix = match[2] || '';
+  if (suffix === 'k')   return Math.round(num * 1_000);
+  if (suffix === 'kk' || suffix === 'm') return Math.round(num * 1_000_000);
+  if (suffix === 'kkk' || suffix === 'b') return Math.round(num * 1_000_000_000);
+  return Math.round(num);
+}
+
+function setupGoldShorthandInput(input) {
+  input.dataset.raw = '';
+  input.addEventListener('focus', () => {
+    if (input.dataset.raw) input.value = input.dataset.raw;
+  });
+  input.addEventListener('blur', () => {
+    const result = parseGoldShorthand(input.value);
+    if (result != null) {
+      input.dataset.raw = String(result);
+      input.value = priceFormatter.format(result);
+    } else {
+      input.dataset.raw = '';
+    }
+  });
+}
+
+setupGoldShorthandInput(dom.searchMaxPrice);
+setupGoldShorthandInput(dom.watchPrice);
 
 function populateSelect(select, values, placeholder) {
   const previous = select.value;
@@ -479,6 +491,92 @@ setupAutocomplete(dom.searchInput,      dom.searchAutocomplete);
 setupAutocomplete(dom.historyItemName,  dom.historyAutocomplete);
 setupAutocomplete(dom.watchItem,        dom.watchAutocomplete);
 
+// ── Hotkey Capture ────────────────────────────────────────────────────────────
+
+// Symbols that should be expressed as code names in automation (native helper) format
+const AUTOMATION_CODE_MAP = {
+  ';': 'Semicolon', "'": 'Quote', ',': 'Comma',
+  '[': 'BracketLeft', ']': 'BracketRight', '.': 'Period',
+  '/': 'Slash', '\\': 'Backslash', '=': 'Equal', '-': 'Minus',
+  '`': 'Backquote',
+};
+
+function setupHotkeyCapture(inputEl, mode) {
+  if (!inputEl) return;
+
+  inputEl.addEventListener('focus', () => {
+    if (!inputEl.value) {
+      inputEl.placeholder = 'Press a key…';
+      inputEl.classList.add('listening');
+    }
+  });
+
+  inputEl.addEventListener('keydown', e => {
+    // Allow Tab to move focus naturally
+    if (e.key === 'Tab') return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Backspace with empty value = clear / keep empty
+    if (e.key === 'Backspace' && !inputEl.value) {
+      inputEl.placeholder = 'Click to bind…';
+      inputEl.classList.remove('listening');
+      inputEl.blur();
+      return;
+    }
+
+    // Pure modifier keypress — don't capture yet
+    const pureMod = ['Control', 'Alt', 'Shift', 'Meta'].includes(e.key);
+    if (pureMod) return;
+
+    const parts = [];
+    if (e.ctrlKey)  parts.push(mode === 'app' ? 'Ctrl'    : 'Ctrl');
+    if (e.altKey)   parts.push(mode === 'app' ? 'Alt'     : 'Alt');
+    if (e.shiftKey) parts.push(mode === 'app' ? 'Shift'   : 'Shift');
+
+    let keyPart;
+    if (mode === 'automation') {
+      // Native helper format: function keys by name, symbols by code name, letters uppercase
+      if (/^F\d+$/.test(e.key)) {
+        keyPart = e.key;
+      } else if (AUTOMATION_CODE_MAP[e.key]) {
+        keyPart = AUTOMATION_CODE_MAP[e.key];
+      } else if (e.key === 'Escape') {
+        keyPart = 'Escape';
+      } else if (e.key === 'Mouse3' || e.code === 'Mouse3') {
+        keyPart = 'MouseMiddle';
+      } else if (e.key.length === 1) {
+        keyPart = e.key.toUpperCase();
+      } else {
+        keyPart = e.code || e.key;
+      }
+    } else {
+      // Electron accelerator format: function keys, letters uppercase, Escape
+      if (/^F\d+$/.test(e.key)) {
+        keyPart = e.key;
+      } else if (e.key === 'Escape') {
+        keyPart = 'Escape';
+      } else if (e.key.length === 1) {
+        keyPart = e.key.toUpperCase();
+      } else {
+        keyPart = e.key;
+      }
+    }
+
+    parts.push(keyPart);
+    inputEl.value = parts.join('+');
+    inputEl.placeholder = 'Click to bind…';
+    inputEl.classList.remove('listening');
+    inputEl.blur();
+  });
+
+  inputEl.addEventListener('blur', () => {
+    inputEl.placeholder = 'Click to bind…';
+    inputEl.classList.remove('listening');
+  });
+}
+
 // ── Server Selector ───────────────────────────────────────────────────────────
 
 dom.serverBtns.forEach(btn => {
@@ -486,6 +584,10 @@ dom.serverBtns.forEach(btn => {
     dom.serverBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     state.server = btn.dataset.server;
+    // Persist if "remember server" is checked
+    if (dom.filterRememberServer?.checked) {
+      localStorage.setItem('savedServer', state.server);
+    }
   });
 });
 
@@ -509,7 +611,11 @@ function setCollapsed(val) {
   state.isCollapsed = val;
   document.body.classList.toggle('collapsed', val);
   dom.btnCollapse.textContent = val ? '▼' : '▲';
-  if (window.electronAPI) window.electronAPI.resizeWindow({ width: 420, height: val ? 38 : 600 });
+  const scale = Math.max(0.9, Math.min(1.2, parseFloat(localStorage.getItem('uiScale') || '1')));
+  window.electronAPI?.resizeWindow?.({
+    width:  Math.round(420 * scale),
+    height: val ? Math.round(38 * scale) : Math.round(600 * scale),
+  });
 }
 
 dom.btnCollapse.addEventListener('click', () => setCollapsed(!state.isCollapsed));
@@ -522,6 +628,8 @@ function setAltToggleState(isEnabled) {
   state.altHeld = isEnabled;
   dom.altIndicator.classList.toggle('active', isEnabled);
   dom.altIndicator.textContent = isEnabled ? 'Alt+I/F8: click enabled' : 'Alt+I/F8: click-through';
+  const baseFraction = Math.max(0.1, Math.min(1, parseFloat(localStorage.getItem('opacity') ?? '100') / 100));
+  applyEffectiveBgAlpha(baseFraction);
 }
 
 if (window.electronAPI) {
@@ -682,7 +790,6 @@ async function doSearch() {
   const quality   = dom.searchQuality.value;
   const plusLevel = dom.searchPlus.value !== '' ? parseInt(dom.searchPlus.value, 10) : undefined;
   const sockets   = dom.searchSockets.value !== '' ? parseInt(dom.searchSockets.value, 10) : undefined;
-  const minPrice  = getRawPrice(dom.searchMinPrice) ?? undefined;
   const maxPrice  = getRawPrice(dom.searchMaxPrice) ?? undefined;
 
   if (!query && !major && !minor) { setStatus('Enter search terms', 'warn'); return; }
@@ -693,7 +800,7 @@ async function doSearch() {
 
   try {
     const data = await getListings({ search: query, majorType: major, minorType: minor,
-      quality, plusLevel, sockets, minPrice, maxPrice, server: state.server });
+      quality, plusLevel, sockets, maxPrice, server: state.server });
     const items = Array.isArray(data) ? data : (data?.listings ?? data?.items ?? []);
     state.searchItems = sortItems(items, state.searchSort.key, state.searchSort.dir);
     dom.searchCount.textContent = `(${items.length})`;
@@ -712,7 +819,6 @@ dom.searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSear
 dom.searchClear.addEventListener('click', () => {
   dom.searchInput.value = dom.searchMajor.value = dom.searchMinor.value =
   dom.searchQuality.value = dom.searchPlus.value = dom.searchSockets.value = '';
-  dom.searchMinPrice.value = dom.searchMinPrice.dataset.raw = '';
   dom.searchMaxPrice.value = dom.searchMaxPrice.dataset.raw = '';
   dom.searchResults.innerHTML = '<div class="placeholder-text">Enter search terms above</div>';
   dom.searchCount.textContent = '';
@@ -763,7 +869,9 @@ async function loadHistory() {
       return;
     }
     dom.chartPlaceholder.style.display = 'none';
-    drawChart(dom.chartCanvas, points, formatPrice);
+    state.historyPoints = points;
+    const { pts } = drawChart(dom.chartCanvas, points, formatPrice);
+    state.chartPts = pts;
 
     const lows  = points.map(p => p.lowest).filter(Number.isFinite).sort((a, b) => a - b);
     const avgs  = points.map(p => p.avg).filter(Number.isFinite).sort((a, b) => a - b);
@@ -835,7 +943,6 @@ function buildWatchFilters() {
     quality:   dom.watchQuality.value,
     plusLevel: dom.watchPlus.value !== '' ? parseInt(dom.watchPlus.value, 10) : undefined,
     sockets:   dom.watchSockets.value !== '' ? parseInt(dom.watchSockets.value, 10) : undefined,
-    minPrice:  getRawPrice(dom.watchMinPrice) ?? undefined,
     maxPrice:  getRawPrice(dom.watchPrice) ?? undefined,
     server:    state.server,
   };
@@ -876,7 +983,7 @@ dom.watchClear.addEventListener('click', () => {
   stopWatch();
   dom.watchItem.value = dom.watchMajor.value = dom.watchMinor.value =
   dom.watchQuality.value = dom.watchPlus.value = dom.watchSockets.value = '';
-  dom.watchMinPrice.value = dom.watchMinPrice.dataset.raw = dom.watchMinCount.value = '';
+  dom.watchMinCount.value = '';
   dom.watchPrice.value = dom.watchPrice.dataset.raw = '';
   dom.watchPriceBasis.value = dom.watchPricePct.value = '';
   state.watchItems = [];
@@ -892,6 +999,70 @@ function showDealAlert(listing) {
   dom.alertPopup.classList.add('show');
   setTimeout(() => dom.alertPopup.classList.remove('show'), 5000);
 }
+
+// ── Chart Tooltip + Modal ─────────────────────────────────────────────────────
+
+function chartHitTest(pts, canvasEl, mouseX) {
+  if (!pts || !pts.length) return null;
+  const rect = canvasEl.getBoundingClientRect();
+  const relX = mouseX - rect.left;
+  let best = null;
+  let bestDx = Infinity;
+  pts.forEach(pt => {
+    const dx = Math.abs(pt.x - relX);
+    if (dx < bestDx) { bestDx = dx; best = pt; }
+  });
+  return bestDx < 32 ? best : null;
+}
+
+function showChartTooltip(pt, e) {
+  if (!pt) { dom.chartTooltip.style.display = 'none'; return; }
+  const d = new Date(pt.bucket * 1000);
+  const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  dom.chartTooltip.innerHTML = `<span style="color:var(--gold-dim)">${dateStr} ${timeStr}</span><br><strong style="color:var(--gold)">${formatPrice(pt.price)} gold</strong>`;
+  dom.chartTooltip.style.display = 'block';
+  dom.chartTooltip.style.left = (e.clientX + 12) + 'px';
+  dom.chartTooltip.style.top  = (e.clientY - 10) + 'px';
+}
+
+dom.chartCanvas?.addEventListener('mousemove', e => {
+  const pt = chartHitTest(state.chartPts, dom.chartCanvas, e.clientX);
+  showChartTooltip(pt, e);
+});
+dom.chartCanvas?.addEventListener('mouseleave', () => {
+  dom.chartTooltip.style.display = 'none';
+});
+
+dom.chartExpandBtn?.addEventListener('click', () => {
+  if (!state.historyPoints.length) return;
+  dom.chartModal.style.display = 'flex';
+  // Defer draw so the modal canvas is visible and has dimensions
+  requestAnimationFrame(() => {
+    const { pts } = drawChart(dom.chartModalCanvas, state.historyPoints, formatPrice);
+    dom.chartModalCanvas._pts = pts;
+  });
+});
+
+dom.chartModalCanvas?.addEventListener('mousemove', e => {
+  const pts = dom.chartModalCanvas._pts;
+  const pt = chartHitTest(pts, dom.chartModalCanvas, e.clientX);
+  showChartTooltip(pt, e);
+});
+dom.chartModalCanvas?.addEventListener('mouseleave', () => {
+  dom.chartTooltip.style.display = 'none';
+});
+
+dom.chartModalClose?.addEventListener('click', () => {
+  dom.chartModal.style.display = 'none';
+  dom.chartTooltip.style.display = 'none';
+});
+dom.chartModal?.addEventListener('click', e => {
+  if (e.target === dom.chartModal) {
+    dom.chartModal.style.display = 'none';
+    dom.chartTooltip.style.display = 'none';
+  }
+});
 
 // ── Settings Tab ──────────────────────────────────────────────────────────────
 
@@ -910,6 +1081,7 @@ function applyUiScale(val) {
   document.documentElement.style.setProperty('--ui-scale', String(scale));
   dom.uiScaleSelect.value = String(scale);
   localStorage.setItem('uiScale', String(scale));
+  window.electronAPI?.resizeWindow?.({ width: Math.round(420 * scale), height: Math.round(600 * scale) });
 }
 
 function applyFontPairing(key) {
@@ -919,6 +1091,7 @@ function applyFontPairing(key) {
   document.documentElement.style.setProperty('--display', pairing.display);
   dom.fontPairingSelect.value = resolved;
   localStorage.setItem('fontPairing', resolved);
+  window.electronAPI?.setUiFont?.(pairing.ui);
 }
 
 dom.uiScaleSelect.addEventListener('change',     () => applyUiScale(dom.uiScaleSelect.value));
@@ -928,12 +1101,38 @@ function applyOpacity(pct) {
   const clamped = Math.max(10, Math.min(100, pct));
   dom.opacitySlider.value = clamped;
   dom.opacityInput.value  = clamped;
-  window.electronAPI?.setOpacity?.(clamped / 100);
   localStorage.setItem('opacity', String(clamped));
+  applyEffectiveBgAlpha(clamped / 100);
+}
+
+function applyEffectiveBgAlpha(baseFraction) {
+  const effective = state.altHeld ? baseFraction : Math.max(0.05, baseFraction - 0.12);
+  document.documentElement.style.setProperty('--bg-alpha', String(effective));
 }
 
 dom.opacitySlider.addEventListener('input',  () => applyOpacity(parseInt(dom.opacitySlider.value)));
 dom.opacityInput.addEventListener('change',  () => applyOpacity(parseInt(dom.opacityInput.value)));
+
+function applyTextOpacity(pct) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  dom.textOpacitySlider.value = clamped;
+  dom.textOpacityInput.value  = clamped;
+  document.documentElement.style.setProperty('--text-alpha', String(clamped / 100));
+  localStorage.setItem('textOpacity', String(clamped));
+}
+
+dom.textOpacitySlider.addEventListener('input',  () => applyTextOpacity(parseInt(dom.textOpacitySlider.value)));
+dom.textOpacityInput.addEventListener('change',  () => applyTextOpacity(parseInt(dom.textOpacityInput.value)));
+
+const debugToggleBtn = document.getElementById('debug-toggle');
+const debugBody = document.getElementById('debug-body');
+if (debugToggleBtn && debugBody) {
+  debugToggleBtn.addEventListener('click', () => {
+    const open = debugBody.style.display !== 'none';
+    debugBody.style.display = open ? 'none' : 'block';
+    debugToggleBtn.textContent = open ? '\u25b6' : '\u25bc';
+  });
+}
 dom.resetPositionBtn.addEventListener('click', () => {
   window.electronAPI?.resetWindowPosition?.();
   setStatus('Position reset', 'ok');
@@ -957,8 +1156,6 @@ function renderAutomationState(nextState) {
   const buffs = activeProfile.buffs || {};
   const hotkeys = activeProfile.hotkeys || {};
 
-  populateAutomationHotkeySelects();
-
   dom.automationHelperStatus.textContent = helperStatus.lastError?.code
     ? `${helperStatus.lifecycle || 'unknown'} · ${helperStatus.lastError.code}`
     : (helperStatus.lifecycle || 'unknown');
@@ -973,6 +1170,7 @@ function renderAutomationState(nextState) {
   setControlValueIfIdle(dom.automationTargetProcessName, gameTarget.processName || '');
   setControlValueIfIdle(dom.automationTargetRequireForeground, Boolean(gameTarget.requireForegroundForInput), 'checked');
   setControlValueIfIdle(dom.automationTargetPollInterval, gameTarget.windowPollIntervalMs ?? 500);
+  setControlValueIfIdle(dom.automationFkeyCode, runtimeState.fKeyCode ?? 'F7');
   setControlValueIfIdle(dom.automationLeftInterval, runtimeState.leftClickIntervalMs ?? 80);
   setControlValueIfIdle(dom.automationRightInterval, runtimeState.rightClickIntervalMs ?? 120);
   setControlValueIfIdle(dom.automationF7Interval, runtimeState.f7IntervalMs ?? 500);
@@ -1005,6 +1203,9 @@ function renderAutomationState(nextState) {
   setControlValueIfIdle(dom.automationBuffStigmaVisible, Boolean(buffs.stigma?.visibleInOverlay), 'checked');
   setControlValueIfIdle(dom.automationBuffShieldVisible, Boolean(buffs.shield?.visibleInOverlay), 'checked');
   setControlValueIfIdle(dom.automationBuffInvisibilityVisible, Boolean(buffs.invisibility?.visibleInOverlay), 'checked');
+  setControlValueIfIdle(dom.automationBuffStigmaMode, buffs.stigma?.countMode || 'countdown');
+  setControlValueIfIdle(dom.automationBuffShieldMode, buffs.shield?.countMode || 'countdown');
+  setControlValueIfIdle(dom.automationBuffInvisibilityMode, buffs.invisibility?.countMode || 'countdown');
   setControlValueIfIdle(dom.automationHotkeyMaster, hotkeys.masterToggle?.binding || '');
   setControlValueIfIdle(dom.automationHotkeyEmergency, hotkeys.emergencyStop?.binding || '');
   setControlValueIfIdle(dom.automationHotkeyLeft, hotkeys.leftToggle?.binding || '');
@@ -1017,7 +1218,7 @@ function renderAutomationState(nextState) {
   setControlValueIfIdle(dom.automationHotkeyInvisibility, hotkeys.invisibilityActivate?.binding || '');
   if (dom.automationToggleLeft) dom.automationToggleLeft.textContent = `Left ${runtimeState.leftClickerEnabled ? 'ON' : 'OFF'}`;
   if (dom.automationToggleRight) dom.automationToggleRight.textContent = `Right ${runtimeState.rightClickerEnabled ? 'ON' : 'OFF'}`;
-  if (dom.automationToggleF7) dom.automationToggleF7.textContent = `F7 ${runtimeState.f7Enabled ? 'ON' : 'OFF'}`;
+  if (dom.automationToggleF7) dom.automationToggleF7.textContent = `F-Key ${runtimeState.f7Enabled ? 'ON' : 'OFF'}`;
   if (dom.automationToggleShift) dom.automationToggleShift.textContent = `Shift ${runtimeState.shiftHeldEnabled ? 'ON' : 'OFF'}`;
   if (dom.automationToggleCtrl) dom.automationToggleCtrl.textContent = `Ctrl ${runtimeState.ctrlHeldEnabled ? 'ON' : 'OFF'}`;
 
@@ -1204,6 +1405,7 @@ dom.automationSaveRuntime?.addEventListener('click', async () => {
     runtime: {
       ...activeProfile.runtime,
       ...runtimeState,
+      fKeyCode: dom.automationFkeyCode?.value || runtimeState?.fKeyCode || activeProfile.runtime.fKeyCode || 'F7',
       leftClickIntervalMs: parseInt(dom.automationLeftInterval.value, 10) || runtimeState?.leftClickIntervalMs || activeProfile.runtime.leftClickIntervalMs,
       rightClickIntervalMs: parseInt(dom.automationRightInterval.value, 10) || runtimeState?.rightClickIntervalMs || activeProfile.runtime.rightClickIntervalMs,
       f7IntervalMs: parseInt(dom.automationF7Interval.value, 10) || runtimeState?.f7IntervalMs || activeProfile.runtime.f7IntervalMs,
@@ -1246,6 +1448,7 @@ dom.automationSaveBuffs?.addEventListener('click', async () => {
         warn1Sec: parseInt(dom.automationBuffStigmaWarn1.value, 10) || activeProfile.buffs.stigma.warn1Sec,
         warn2Sec: parseInt(dom.automationBuffStigmaWarn2.value, 10) || activeProfile.buffs.stigma.warn2Sec,
         visibleInOverlay: Boolean(dom.automationBuffStigmaVisible.checked),
+        countMode: dom.automationBuffStigmaMode?.value || activeProfile.buffs.stigma.countMode || 'countdown',
       },
       shield: {
         ...activeProfile.buffs.shield,
@@ -1254,6 +1457,7 @@ dom.automationSaveBuffs?.addEventListener('click', async () => {
         warn1Sec: parseInt(dom.automationBuffShieldWarn1.value, 10) || activeProfile.buffs.shield.warn1Sec,
         warn2Sec: parseInt(dom.automationBuffShieldWarn2.value, 10) || activeProfile.buffs.shield.warn2Sec,
         visibleInOverlay: Boolean(dom.automationBuffShieldVisible.checked),
+        countMode: dom.automationBuffShieldMode?.value || activeProfile.buffs.shield.countMode || 'countdown',
       },
       invisibility: {
         ...activeProfile.buffs.invisibility,
@@ -1262,6 +1466,7 @@ dom.automationSaveBuffs?.addEventListener('click', async () => {
         warn1Sec: parseInt(dom.automationBuffInvisibilityWarn1.value, 10) || activeProfile.buffs.invisibility.warn1Sec,
         warn2Sec: parseInt(dom.automationBuffInvisibilityWarn2.value, 10) || activeProfile.buffs.invisibility.warn2Sec,
         visibleInOverlay: Boolean(dom.automationBuffInvisibilityVisible.checked),
+        countMode: dom.automationBuffInvisibilityMode?.value || activeProfile.buffs.invisibility.countMode || 'countdown',
       },
     },
   });
@@ -1361,6 +1566,41 @@ if (window.electronAPI?.automation) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+// Setup hotkey capture for all automation hotkey inputs (native helper format)
+[
+  dom.automationHotkeyMaster, dom.automationHotkeyEmergency, dom.automationHotkeyLeft,
+  dom.automationHotkeyRight,  dom.automationHotkeyF7,       dom.automationHotkeyShift,
+  dom.automationHotkeyCtrl,   dom.automationHotkeyStigma,   dom.automationHotkeyShield,
+  dom.automationHotkeyInvisibility,
+].forEach(el => setupHotkeyCapture(el, 'automation'));
+
+// Setup hotkey capture for app hotkey inputs (Electron accelerator format)
+[
+  dom.appHotkeyInteract, dom.appHotkeyCollapse,
+  dom.appHotkeyHide,     dom.appHotkeyQuit,
+].forEach(el => setupHotkeyCapture(el, 'app'));
+
+// App hotkeys save
+dom.appSaveHotkeys?.addEventListener('click', async () => {
+  const hotkeys = {
+    interact: dom.appHotkeyInteract?.value || '',
+    collapse: dom.appHotkeyCollapse?.value || '',
+    hide:     dom.appHotkeyHide?.value     || '',
+    quit:     dom.appHotkeyQuit?.value     || '',
+  };
+  try {
+    await window.electronAPI?.setAppHotkeys?.(hotkeys);
+    setStatus('App hotkeys saved', 'ok');
+  } catch (err) {
+    setStatus('Failed to save app hotkeys', 'error');
+  }
+});
+
+// "Remember server" checkbox persistence
+dom.filterRememberServer?.addEventListener('change', () => {
+  localStorage.setItem('filterRememberServer', dom.filterRememberServer.checked ? '1' : '');
+});
+
 (async function init() {
   setAltToggleState(false);
   setStatus('Ready — Press Alt+I or F8 to interact', 'ok');
@@ -1370,6 +1610,31 @@ if (window.electronAPI?.automation) {
   if (savedFontPairing) applyFontPairing(savedFontPairing);
   const savedOpacity = localStorage.getItem('opacity');
   if (savedOpacity) applyOpacity(parseInt(savedOpacity));
+  const savedTextOpacity = localStorage.getItem('textOpacity');
+  if (savedTextOpacity) applyTextOpacity(parseInt(savedTextOpacity));
+
+  // Restore "remember server" setting and select saved server
+  const rememberServer = localStorage.getItem('filterRememberServer') === '1';
+  if (dom.filterRememberServer) dom.filterRememberServer.checked = rememberServer;
+  if (rememberServer) {
+    const savedServer = localStorage.getItem('savedServer');
+    if (savedServer) {
+      const btn = [...dom.serverBtns].find(b => b.dataset.server === savedServer);
+      if (btn) btn.click();
+    }
+  }
+
+  // Load app hotkeys from main process
+  try {
+    const appHotkeys = await window.electronAPI?.getAppHotkeys?.();
+    if (appHotkeys) {
+      if (dom.appHotkeyInteract) dom.appHotkeyInteract.value = appHotkeys.interact || '';
+      if (dom.appHotkeyCollapse) dom.appHotkeyCollapse.value = appHotkeys.collapse || '';
+      if (dom.appHotkeyHide)     dom.appHotkeyHide.value     = appHotkeys.hide     || '';
+      if (dom.appHotkeyQuit)     dom.appHotkeyQuit.value     = appHotkeys.quit     || '';
+    }
+  } catch (_) { /* not critical */ }
+
   await Promise.allSettled([ensureFilterMeta(), ensureMapImage(), ensurePool(), updateMinimapSide()]);
   await refreshAutomationState();
 })();

@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Settings
   setOpacity: (opacity) => ipcRenderer.send('set-opacity', opacity),
+  setUiFont: (uiCssString) => ipcRenderer.send('set-ui-font', uiCssString),
+  onUiFontChanged: (cb) => ipcRenderer.on('ui-font-changed', (_, font) => cb(font)),
+
+  // App hotkeys
+  getAppHotkeys: () => ipcRenderer.invoke('get-app-hotkeys'),
+  setAppHotkeys: (hotkeys) => ipcRenderer.invoke('set-app-hotkeys', hotkeys),
 
   // Price history DB queries
   queryPriceHistory: (filters) => ipcRenderer.invoke('query-price-history', filters),
