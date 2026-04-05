@@ -121,7 +121,8 @@ const dom = {
   watchText:           $('watch-text'),
   watchMatches:        $('watch-matches'),
 
-  fontSizeSelect:      $('font-size-select'),
+  uiScaleSelect:       $('ui-scale-select'),
+  fontPairingSelect:   $('font-pairing-select'),
   opacitySlider:       $('opacity-slider'),
   opacityInput:        $('opacity-input'),
   resetPositionBtn:    $('reset-position-btn'),
@@ -894,14 +895,34 @@ function showDealAlert(listing) {
 
 // ── Settings Tab ──────────────────────────────────────────────────────────────
 
-function applyFontSize(px) {
-  const clamped = Math.max(10, Math.min(20, parseInt(px) || 14));
-  document.documentElement.style.setProperty('--font-size', clamped + 'px');
-  dom.fontSizeSelect.value = String(clamped);
-  localStorage.setItem('fontSize', String(clamped));
+const FONT_PAIRINGS = {
+  classic:  { ui: "'Segoe UI', Tahoma, sans-serif",             display: "'Palatino Linotype', Georgia, serif" },
+  scholar:  { ui: "Cambria, Georgia, serif",                     display: "Garamond, 'Book Antiqua', serif" },
+  terminal: { ui: "Consolas, 'Courier New', monospace",          display: "'Courier New', monospace" },
+  modern:   { ui: "Calibri, 'Trebuchet MS', sans-serif",         display: "Georgia, Cambria, serif" },
+  oldeng:   { ui: "'Trebuchet MS', Verdana, sans-serif",         display: "'Book Antiqua', 'Palatino Linotype', serif" },
+  humanist: { ui: "'Gill Sans MT', Calibri, sans-serif",         display: "Perpetua, Georgia, serif" },
+  sharp:    { ui: "'Franklin Gothic Medium', Arial, sans-serif", display: "Constantia, Georgia, serif" },
+};
+
+function applyUiScale(val) {
+  const scale = Math.max(0.9, Math.min(1.2, parseFloat(val) || 1));
+  document.documentElement.style.setProperty('--ui-scale', String(scale));
+  dom.uiScaleSelect.value = String(scale);
+  localStorage.setItem('uiScale', String(scale));
 }
 
-dom.fontSizeSelect.addEventListener('change', () => applyFontSize(dom.fontSizeSelect.value));
+function applyFontPairing(key) {
+  const resolved = FONT_PAIRINGS[key] ? key : 'classic';
+  const pairing  = FONT_PAIRINGS[resolved];
+  document.documentElement.style.setProperty('--ui',      pairing.ui);
+  document.documentElement.style.setProperty('--display', pairing.display);
+  dom.fontPairingSelect.value = resolved;
+  localStorage.setItem('fontPairing', resolved);
+}
+
+dom.uiScaleSelect.addEventListener('change',     () => applyUiScale(dom.uiScaleSelect.value));
+dom.fontPairingSelect.addEventListener('change', () => applyFontPairing(dom.fontPairingSelect.value));
 
 function applyOpacity(pct) {
   const clamped = Math.max(10, Math.min(100, pct));
@@ -1343,8 +1364,10 @@ if (window.electronAPI?.automation) {
 (async function init() {
   setAltToggleState(false);
   setStatus('Ready — Press Alt+I or F8 to interact', 'ok');
-  const savedFontSize = localStorage.getItem('fontSize');
-  if (savedFontSize) applyFontSize(savedFontSize);
+  const savedUiScale = localStorage.getItem('uiScale');
+  if (savedUiScale) applyUiScale(savedUiScale);
+  const savedFontPairing = localStorage.getItem('fontPairing');
+  if (savedFontPairing) applyFontPairing(savedFontPairing);
   const savedOpacity = localStorage.getItem('opacity');
   if (savedOpacity) applyOpacity(parseInt(savedOpacity));
   await Promise.allSettled([ensureFilterMeta(), ensureMapImage(), ensurePool(), updateMinimapSide()]);

@@ -325,7 +325,7 @@
       --mono:        Consolas, 'Courier New', monospace;
       --display:     'Palatino Linotype', Georgia, serif;
       --ui:          'Segoe UI', Tahoma, sans-serif;
-      --font-size:   14px;
+      --ui-scale:    1;
       --radius:      4px;
       --shadow:      0 8px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(200,168,75,0.15);
     }
@@ -340,7 +340,7 @@
 
     body {
       font-family: var(--ui);
-      font-size: var(--font-size);
+      zoom: var(--ui-scale);
       color: var(--text);
       background: transparent;
       overflow: hidden;
@@ -1250,13 +1250,25 @@
       <div class="section-label">Display</div>
 
       <div class="setting-row">
-        <label>Font Size</label>
-        <select id="font-size-select">
-          <option value="12">Small (12px)</option>
-          <option value="13">Compact (13px)</option>
-          <option value="14" selected>Normal (14px)</option>
-          <option value="15">Large (15px)</option>
-          <option value="16">Larger (16px)</option>
+        <label>UI Scale</label>
+        <select id="ui-scale-select">
+          <option value="0.9">Small — 90%</option>
+          <option value="1" selected>Normal — 100%</option>
+          <option value="1.1">Large — 110%</option>
+          <option value="1.2">XL — 120%</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label>Font Pairing</label>
+        <select id="font-pairing-select">
+          <option value="classic" style="font-family:'Segoe UI',sans-serif" selected>Classic — Segoe UI / Palatino</option>
+          <option value="scholar" style="font-family:Cambria,serif">Scholar — Cambria / Garamond</option>
+          <option value="terminal" style="font-family:Consolas,monospace">Terminal — Consolas / Courier New</option>
+          <option value="modern" style="font-family:Calibri,sans-serif">Modern Serif — Calibri / Georgia</option>
+          <option value="oldeng" style="font-family:'Trebuchet MS',sans-serif">Old English — Trebuchet / Book Antiqua</option>
+          <option value="humanist" style="font-family:'Gill Sans MT',sans-serif">Humanist — Gill Sans / Perpetua</option>
+          <option value="sharp" style="font-family:'Franklin Gothic Medium',sans-serif">Sharp — Franklin Gothic / Constantia</option>
         </select>
       </div>
 
