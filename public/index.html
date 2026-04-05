@@ -319,13 +319,19 @@
       --red-dim:     #7a2020;
       --green:       #4caf72;
       --green-dim:   #2a6042;
-      --bg-alpha:    1;
-      --bg-deep:     rgba(10,10,14, var(--bg-alpha));
-      --bg-panel:    rgba(15,15,22, var(--bg-alpha));
-      --bg-card:     rgba(21,21,32, var(--bg-alpha));
-      --bg-hover:    rgba(28,28,46, var(--bg-alpha));
-      --border:      rgba(42,42,64, var(--bg-alpha));
-      --border-gold: rgba(58,46,16, var(--bg-alpha));
+      --bg-alpha:       1;
+      --bg-deep-rgb:     10,10,14;
+      --bg-panel-rgb:    15,15,22;
+      --bg-card-rgb:     21,21,32;
+      --bg-hover-rgb:    28,28,46;
+      --border-rgb:      42,42,64;
+      --border-gold-rgb: 58,46,16;
+      --bg-deep:   rgba(var(--bg-deep-rgb),      var(--bg-alpha));
+      --bg-panel:  rgba(var(--bg-panel-rgb),     var(--bg-alpha));
+      --bg-card:   rgba(var(--bg-card-rgb),      var(--bg-alpha));
+      --bg-hover:  rgba(var(--bg-hover-rgb),     var(--bg-alpha));
+      --border:    rgba(var(--border-rgb),        var(--bg-alpha));
+      --border-gold: rgba(var(--border-gold-rgb), var(--bg-alpha));
       --text-alpha:  1;
       --text:        rgba(200,200,216, var(--text-alpha));
       --text-dim:    rgba(180,180,210, var(--text-alpha));
@@ -485,13 +491,10 @@
     #content::-webkit-scrollbar-track { background: var(--bg-deep); }
     #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    .tab-panel { display: none; padding: 12px; min-height: 100%; }
+    .tab-panel { display: none; padding: 12px; padding-bottom: 48px; }
     .tab-panel.active { display: block; }
 
     #tab-settings {
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding-bottom: 20px;
     }
 
     /* ── Section Labels ── */
@@ -684,7 +687,7 @@
 
     .btn-primary {
       padding: 6px 12px;
-      background: linear-gradient(180deg, #2a220a, #1a1408);
+      background: var(--bg-card);
       border: 1px solid var(--gold-dim);
       border-radius: var(--radius);
       color: var(--gold);
@@ -698,7 +701,7 @@
       white-space: nowrap;
     }
     .btn-primary:hover {
-      background: linear-gradient(180deg, #3a2e0e, #241c0a);
+      background: var(--bg-hover);
       border-color: var(--gold);
       color: var(--gold-bright);
     }
@@ -1276,6 +1279,18 @@
     <div class="tab-panel" id="tab-settings">
 
       <div class="section-label">Display</div>
+
+      <div class="setting-row">
+        <label>Theme</label>
+        <select id="theme-select">
+          <option value="original-dark" selected>Original Dark</option>
+          <option value="midnight-blue">Midnight Blue</option>
+          <option value="obsidian">Obsidian</option>
+          <option value="smokey">Smokey</option>
+          <option value="parchment">Parchment</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
 
       <div class="setting-row">
         <label>UI Scale</label>

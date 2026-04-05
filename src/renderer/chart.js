@@ -26,12 +26,18 @@ export function drawChart(canvas, points, formatPrice) {
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  const cssVars   = getComputedStyle(document.documentElement);
+  const gold       = (cssVars.getPropertyValue('--gold')       || '#c8a84b').trim();
+  const goldBright = (cssVars.getPropertyValue('--gold-bright') || '#f0cb6a').trim();
+  const labelCol   = (cssVars.getPropertyValue('--text-dim')   || 'rgba(180,180,210,1)').trim();
+  const gridCol    = (cssVars.getPropertyValue('--border')     || 'rgba(42,42,64,1)').trim();
+
+  ctx.strokeStyle = gridCol;
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = PAD.top + (plotH / 4) * i;
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + plotW, y); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = labelCol;
     ctx.font = '9px Share Tech Mono, monospace';
     ctx.textAlign = 'right';
     ctx.fillText(formatPrice(max - (range / 4) * i), PAD.left - 4, y + 3);
@@ -44,9 +50,13 @@ export function drawChart(canvas, points, formatPrice) {
     bucket: points[i].bucket,
   }));
 
+  // parse gold hex -> r,g,b for gradient alpha
+  const goldRgb = gold.match(/#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i);
+  const [gr, gg, gb] = goldRgb ? [parseInt(goldRgb[1],16), parseInt(goldRgb[2],16), parseInt(goldRgb[3],16)] : [200,168,75];
+
   const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + plotH);
-  grad.addColorStop(0, 'rgba(200,168,75,0.3)');
-  grad.addColorStop(1, 'rgba(200,168,75,0.0)');
+  grad.addColorStop(0, `rgba(${gr},${gg},${gb},0.3)`);
+  grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.0)`);
 
   ctx.beginPath();
   pts.forEach((pt, i) => i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y));
@@ -58,14 +68,14 @@ export function drawChart(canvas, points, formatPrice) {
 
   ctx.beginPath();
   pts.forEach((pt, i) => i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y));
-  ctx.strokeStyle = '#c8a84b';
+  ctx.strokeStyle = gold;
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
   pts.forEach(pt => {
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#f0cb6a';
+    ctx.fillStyle = goldBright;
     ctx.fill();
   });
 
@@ -74,7 +84,7 @@ export function drawChart(canvas, points, formatPrice) {
   const isIntraday = spanSec <= 86400;
   const minLabelSpacingPx = 42; // minimum pixel gap between labels
 
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillStyle = labelCol;
   ctx.font = '9px Share Tech Mono, monospace';
   ctx.textAlign = 'center';
 
