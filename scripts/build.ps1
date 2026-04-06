@@ -113,8 +113,11 @@ if ($needsInstall) {
     # Force-remove the locked binary so npm can overwrite it.
     $lockedFile = Join-Path $ProjectRoot 'node_modules\better-sqlite3\build\Release\better_sqlite3.node'
     if (Test-Path $lockedFile) {
-        try   { Remove-Item -Force $lockedFile -ErrorAction Stop }
-        catch { Write-Warn "Could not pre-delete better_sqlite3.node — proceeding anyway." }
+        try {
+            Remove-Item -Force $lockedFile -ErrorAction Stop
+        } catch {
+            Write-Warn "Could not pre-delete better_sqlite3.node - proceeding anyway."
+        }
     }
 
     Write-Step "Installing Node.js dependencies..."

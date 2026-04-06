@@ -297,9 +297,9 @@ mod platform {
 
     use x11rb::connection::Connection;
     use x11rb::protocol::xproto::{
-        self, AtomEnum, ConnectionExt as XprotoExt, GetPropertyReply, SetInputFocusRequest,
+        self, AtomEnum, ConnectionExt as XprotoExt,
     };
-    use x11rb::protocol::xtest::ConnectionExt as XtestExt;
+    use x11rb::x11_utils::Serialize;
     use x11rb::rust_connection::RustConnection;
 
     // Publicly exported handle type.
@@ -352,7 +352,7 @@ mod platform {
             let max_kc   = setup.max_keycode;
             let count    = (max_kc - min_kc + 1) as u8;
             let mut keymap: HashMap<u32, u8> = HashMap::new();
-            if let Ok(reply) = conn.get_keyboard_mapping(min_kc, count).and_then(|c| Ok(c.reply()?)) {
+            if let Some(reply) = conn.get_keyboard_mapping(min_kc, count).ok().and_then(|c| c.reply().ok()) {
                 let ks_per_kc = reply.keysyms_per_keycode as usize;
                 for (i, chunk) in reply.keysyms.chunks(ks_per_kc).enumerate() {
                     for &ks in chunk {
@@ -385,7 +385,7 @@ mod platform {
             if reply.value.is_empty() { None } else { Some(reply.value) }
         }
 
-        fn get_window_title(&self, window: Hwnd) -> String {
+        pub fn get_window_title(&self, window: Hwnd) -> String {
             if let Some(bytes) = self.get_property_bytes(window, self.a_net_wm_name, self.a_utf8_string) {
                 return String::from_utf8_lossy(&bytes).into_owned();
             }
@@ -559,7 +559,7 @@ mod platform {
                     use x11rb::protocol::xproto::ConnectionExt as CE;
                     self.conn.query_pointer(self.root).ok()
                         .and_then(|c| c.reply().ok())
-                        .map(|r| (r.mask & xproto::KeyButMask::BUTTON2.into()) != 0)
+                        .map(|r| u16::from(r.mask & xproto::KeyButMask::BUTTON2) != 0)
                         .unwrap_or(false)
                 } else if let Some(ks) = super::binding_to_keysym(&hk.binding) {
                     self.is_key_down_sym(ks)

@@ -8,6 +8,17 @@ const { AutomationService } = require('./automation-service');
 const { createHudWindow } = require('./hud-window');
 const { requestMarket } = require('./main/market-client');
 
+// Full path to powershell.exe — avoids shell:true which breaks paths containing spaces
+// when individual args are joined without quoting (e.g. 'C:\Program Files\...').
+// process.env.SystemRoot is reliable now that cwd is pinned to process.resourcesPath.
+const POWERSHELL_EXE = process.platform === 'win32'
+  ? `${process.env.SystemRoot || 'C:\\Windows'}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`
+  : null;
+
+const CMD_EXE = process.platform === 'win32'
+  ? (process.env.ComSpec || 'cmd.exe')
+  : null;
+
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!hasSingleInstanceLock) {
@@ -46,6 +57,7 @@ function queryDbExternally(mode, filters) {
 }
 
 function releaseInputModifiersAtStartup() {
+  if (process.platform !== 'win32') return;
   try {
     const releaseScript = [
       'Add-Type @"',
@@ -76,6 +88,7 @@ function releaseInputModifiersAtStartup() {
     ], {
       windowsHide: true,
       encoding: 'utf8',
+      shell: true,
     });
   } catch (_) {
     // Ignore startup key-release failures.
@@ -101,6 +114,7 @@ function cleanupOrphanAutomationHelpers() {
     ], {
       windowsHide: true,
       encoding: 'utf8',
+      shell: true,
     });
   } catch (_) {
     // Ignore cleanup failures.
@@ -306,8 +320,8 @@ function getAutomationHelperPath() {
     if (!isLinux && fs.existsSync(packagedHelperScript)) {
       return {
         helperPath: packagedHelperScript,
-        launchCommand: 'powershell.exe',
-        launchArgs: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', packagedHelperScript],
+        launchCommand: POWERSHELL_EXE,
+        launchArgs: ['-NoLogo', '-NonInteractive', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', packagedHelperScript],
       };
     }
     return {
@@ -321,8 +335,8 @@ function getAutomationHelperPath() {
     if (fs.existsSync(scriptPath)) {
       return {
         helperPath: scriptPath,
-        launchCommand: 'powershell.exe',
-        launchArgs: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
+        launchCommand: POWERSHELL_EXE,
+        launchArgs: ['-NoLogo', '-NonInteractive', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
       };
     }
   }
@@ -343,7 +357,7 @@ async function setupAutomation() {
   const profileStore = new ProfileStore({ userDataPath: app.getPath('userData') });
   const helperClient = new AutomationHelperClient({
     ...helperConfig,
-    cwd: path.join(__dirname, '..'),
+    cwd: app.isPackaged ? process.resourcesPath : path.join(__dirname, '..'),
     logger: (tag, message) => sendDebugMessage(`[${tag}] ${message}`),
   });
 

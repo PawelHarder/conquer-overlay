@@ -70,8 +70,16 @@ class AutomationHelperClient extends EventEmitter {
     this.resetReadyPromise();
     const childToken = ++this.activeChildToken;
 
+    // Use an explicit cwd — leaving it undefined lets process.cwd() resolve to
+    // a path inside the .asar archive in packaged Electron apps, which is a
+    // virtual directory that doesn't exist on the native filesystem and causes
+    // CreateProcess to fail with ENOENT regardless of the executable path.
+    const effectiveCwd = this.cwd !== undefined
+      ? this.cwd
+      : (this.helperPath ? require('path').dirname(this.helperPath) : undefined);
+
     this.child = spawn(command, args, {
-      cwd: this.cwd,
+      cwd: effectiveCwd,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
     });
@@ -206,6 +214,8 @@ class AutomationHelperClient extends EventEmitter {
       this.stdoutBuffer = this.stdoutBuffer.slice(newlineIndex + 1);
       newlineIndex = this.stdoutBuffer.indexOf('\n');
       if (!line) continue;
+      // Skip non-JSON lines (e.g. PowerShell startup banner / update notices).
+      if (!line.startsWith('{')) continue;
 
       try {
         const message = JSON.parse(line);
