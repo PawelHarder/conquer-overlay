@@ -63,7 +63,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Conquer Overlay"
+      "shortcutName": "Conquer Overlay",
+      "include": "scripts/installer-selfdelete.nsh"
+
     },
     "linux": {
       "target": [

@@ -2,7 +2,7 @@
  * Conquer Market Overlay — Renderer Process
  */
 
-import { getListings, getFilters, watchForDeal, loadMarketSnapshot } from './api.js';
+import { getListings, getFilters, watchForDeal, loadMarketSnapshot, WEAPON_1H_CLASSES, WEAPON_2H_CLASSES } from './api.js';
 import {
   init as initMinimap, MINIMAP_POPUP_WIDTH,
   ensureMapImage, updateMinimapSide,
@@ -28,6 +28,7 @@ const state = {
   itemNamePool:     [],
   poolLoaded:       false,
   filterMetaLoaded: false,
+  filterMeta:       null,
   mapImage:         null,
   minimapSide:      'right',
   minimapPinned:    null,
@@ -219,6 +220,16 @@ initMinimap(dom, state);
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
+const PLUS_DIVISOR = [0, 1, 3, 9, 27, 81, 243, 729, 2187, 6561];
+
+function perPlusHtml(item) {
+  const lvl = Number(item.AdditionLevel);
+  if (!lvl || lvl < 2 || lvl > 9) return '';
+  const price = Number(item.Price ?? item.price);
+  if (!Number.isFinite(price) || price <= 0) return '';
+  return `<span class="listing-per-plus">${formatPrice(Math.round(price / PLUS_DIVISOR[lvl]))}/+1</span>`;
+}
+
 function formatPrice(n) {
   if (n == null || isNaN(n)) return '—';
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -407,6 +418,25 @@ function setupGoldShorthandInput(input) {
 setupGoldShorthandInput(dom.searchMaxPrice);
 setupGoldShorthandInput(dom.watchPrice);
 
+function populateMinorForMajor(majorSelect, minorSelect, placeholder) {
+  const major = majorSelect.value;
+  const minors = (state.filterMeta?.minorByMajor?.[major]) ?? state.filterMeta?.minorCategories ?? [];
+  const prev = minorSelect.value;
+  const isWeapon = major.toLowerCase() === 'weapon';
+  const groups = isWeapon
+    ? [
+        `<option value="__weapon_1h__">⚔ 1-Handed (all)</option>`,
+        `<option value="__weapon_2h__">🗡 2-Handed (all)</option>`,
+      ]
+    : [];
+  minorSelect.innerHTML = [
+    `<option value="">${escHtml(placeholder)}</option>`,
+    ...groups,
+    ...minors.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`),
+  ].join('');
+  if (prev && [...minorSelect.options].some(o => o.value === prev)) minorSelect.value = prev;
+}
+
 function populateSelect(select, values, placeholder) {
   const previous = select.value;
   select.innerHTML = [`<option value="">${escHtml(placeholder)}</option>`,
@@ -417,26 +447,45 @@ function populateSelect(select, values, placeholder) {
 function populatePlusSelect(select, placeholder) {
   const previous = select.value;
   select.innerHTML = [`<option value="">${escHtml(placeholder)}</option>`,
-    ...Array.from({ length: 13 }, (_, i) => `<option value="${i}">+${i}</option>`)].join('');
+    ...Array.from({ length: 10 }, (_, i) => `<option value="${i}">+${i}</option>`)].join('');
   if (previous) select.value = previous;
+}
+
+const QUALITY_ORDER = ['Fixed', 'Normal', 'Refined', 'Unique', 'Elite', 'Super', 'Legendary'];
+
+function sortQualities(qualities) {
+  return [...qualities].sort((a, b) => {
+    const ai = QUALITY_ORDER.indexOf(a);
+    const bi = QUALITY_ORDER.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
 }
 
 async function ensureFilterMeta() {
   if (state.filterMetaLoaded) return;
   try {
     const filters = await getFilters();
+    state.filterMeta = filters;
+    const qualities = sortQualities(filters.qualities ?? []);
     populateSelect(dom.searchMajor,   filters.majorCategories ?? [], 'All Categories');
     populateSelect(dom.searchMinor,   filters.minorCategories ?? [], 'All Minor Classes');
-    populateSelect(dom.searchQuality, filters.qualities ?? [],       'All Qualities');
+    populateSelect(dom.searchQuality, qualities,                     'All Qualities');
     populateSelect(dom.historyMajor,  filters.majorCategories ?? [], 'Any Category');
     populateSelect(dom.historyMinor,  filters.minorCategories ?? [], 'Any Minor Class');
-    populateSelect(dom.historyQuality,filters.qualities ?? [],       'Any Quality');
+    populateSelect(dom.historyQuality, qualities,                    'Any Quality');
     populateSelect(dom.watchMajor,    filters.majorCategories ?? [], 'Any Category');
     populateSelect(dom.watchMinor,    filters.minorCategories ?? [], 'Any Minor Class');
-    populateSelect(dom.watchQuality,  filters.qualities ?? [],       'Any Quality');
+    populateSelect(dom.watchQuality,  qualities,                     'Any Quality');
     populatePlusSelect(dom.searchPlus,  'Any Plus');
     populatePlusSelect(dom.historyPlus, 'Any Plus');
     populatePlusSelect(dom.watchPlus,   'Any Plus');
+    // Wire cascaded minor dropdowns
+    dom.searchMajor.addEventListener('change',  () => populateMinorForMajor(dom.searchMajor,  dom.searchMinor,  'All Minor Classes'));
+    dom.historyMajor.addEventListener('change', () => populateMinorForMajor(dom.historyMajor, dom.historyMinor, 'Any Minor Class'));
+    dom.watchMajor.addEventListener('change',   () => populateMinorForMajor(dom.watchMajor,   dom.watchMinor,   'Any Minor Class'));
     state.filterMetaLoaded = true;
   } catch (_) { /* keep fallback markup */ }
 }
@@ -715,7 +764,7 @@ function renderListings(items, container) {
       <span class="listing-seller">${escHtml(item.SellerName ?? '—')}</span>
       <span class="listing-quality">${escHtml(item.QualityName ?? '—')}</span>
       <span class="listing-pos">${item.PositionX != null ? item.PositionX + ',' + item.PositionY : '—'}</span>
-      <span class="listing-price">${formatPrice(item.Price ?? item.price)}</span>
+      <span class="listing-price">${formatPrice(item.Price ?? item.price)}${perPlusHtml(item)}</span>
     </div>
   `).join('');
   container.querySelectorAll('.listing-row').forEach(row => {
@@ -1023,7 +1072,9 @@ function showChartTooltip(pt, e) {
   const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   dom.chartTooltip.innerHTML = `<span style="color:var(--gold-dim)">${dateStr} ${timeStr}</span><br><strong style="color:var(--gold)">${formatPrice(pt.price)} gold</strong>`;
   dom.chartTooltip.style.display = 'block';
-  dom.chartTooltip.style.left = (e.clientX + 12) + 'px';
+  const tipW = dom.chartTooltip.offsetWidth;
+  const left = e.clientX + tipW + 25 > window.innerWidth ? e.clientX - tipW - 25 : e.clientX - 25;
+  dom.chartTooltip.style.left = left + 'px';
   dom.chartTooltip.style.top  = (e.clientY - 10) + 'px';
 }
 

@@ -82,6 +82,15 @@ async function apiFetch(path, params = {}) {
   return requestJson(path, params);
 }
 
+// ── Weapon handedness classification (Classic CO) ────────────────────────────
+// Bow, Backsword, and Shield are distinct classes, not grouped under 1H or 2H.
+export const WEAPON_1H_CLASSES = new Set([
+  'Blade', 'Sword', 'Club', 'Whip', 'Scepter', 'Dagger', 'Axe', 'Hammer', 'Hook',
+]);
+export const WEAPON_2H_CLASSES = new Set([
+  'Glaive', 'Halbert', 'Poleaxe', 'Spear', 'Wand',
+]);
+
 function normalizeText(value) {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -116,7 +125,13 @@ function filterListings(items, opts = {}) {
     if (search && !includesText(item.AttributeName, search)) return false;
     if (server && !includesText(item.ServerName || 'Classic_US', server)) return false;
     if (majorType && !includesText(item.ItemMajorClass, majorType)) return false;
-    if (minorType && !includesText(item.ItemMinorClass, minorType)) return false;
+    if (minorType === '__weapon_1h__') {
+      if (!WEAPON_1H_CLASSES.has(item.ItemMinorClass)) return false;
+    } else if (minorType === '__weapon_2h__') {
+      if (!WEAPON_2H_CLASSES.has(item.ItemMinorClass)) return false;
+    } else if (minorType) {
+      if (!includesText(item.ItemMinorClass, minorType)) return false;
+    }
     if (quality && !includesText(item.QualityName, quality)) return false;
     if (seller && !includesText(item.SellerName, seller)) return false;
     if (gem1 && !includesText(item.Gem1, gem1)) return false;
@@ -172,9 +187,21 @@ export async function loadMarketSnapshot(forceRefresh = false) {
 export async function getFilters() {
   const items = await loadMarketSnapshot();
 
+  // Build per-major minor class lists for cascaded dropdowns.
+  const minorByMajor = {};
+  for (const item of items) {
+    if (!item.ItemMajorClass || !item.ItemMinorClass) continue;
+    if (!minorByMajor[item.ItemMajorClass]) minorByMajor[item.ItemMajorClass] = new Set();
+    minorByMajor[item.ItemMajorClass].add(item.ItemMinorClass);
+  }
+  for (const key of Object.keys(minorByMajor)) {
+    minorByMajor[key] = [...minorByMajor[key]].sort();
+  }
+
   return {
     majorCategories: [...new Set(items.map(item => item.ItemMajorClass).filter(Boolean))].sort(),
     minorCategories: [...new Set(items.map(item => item.ItemMinorClass).filter(Boolean))].sort(),
+    minorByMajor,
     qualities: [...new Set(items.map(item => item.QualityName).filter(Boolean))].sort(),
     servers: [...new Set(items.map(item => item.ServerName || 'Classic_US').filter(Boolean))].sort(),
   };

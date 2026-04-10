@@ -496,8 +496,8 @@ function createOverlay() {
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
     movable: true,
+    thickFrame: false,
     hasShadow: false,
     focusable: false,
     webPreferences: {
