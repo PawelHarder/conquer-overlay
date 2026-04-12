@@ -15,9 +15,9 @@
     "start:admin": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$project = (Resolve-Path '.').Path; $electron = (Resolve-Path '.\\node_modules\\electron\\dist\\electron.exe').Path; Start-Process -Verb RunAs -FilePath $electron -ArgumentList @($project) -WorkingDirectory $project\"",
     "dev": "electron . --dev",
     "dev:admin": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$project = (Resolve-Path '.').Path; $electron = (Resolve-Path '.\\node_modules\\electron\\dist\\electron.exe').Path; Start-Process -Verb RunAs -FilePath $electron -ArgumentList @($project, '--dev') -WorkingDirectory $project\"",
-    "build": "npm run bundle && electron-builder --win --linux --x64",
-    "build:win": "npm run bundle && electron-builder --win --x64",
-    "build:linux": "npm run bundle && electron-builder --linux --x64",
+    "build": "npm run bundle && electron-builder --win --linux --x64 && npm rebuild better-sqlite3",
+    "build:win": "npm run bundle && electron-builder --win --x64 && npm rebuild better-sqlite3",
+    "build:linux": "npm run bundle && electron-builder --linux --x64 && npm rebuild better-sqlite3",
     "build:helper:linux": "cargo build --release --manifest-path native-helper/conquer-helper/Cargo.toml",
     "postinstall": "electron-builder install-app-deps"
   },
