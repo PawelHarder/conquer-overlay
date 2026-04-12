@@ -72,8 +72,7 @@
       "createDesktopShortcut": false,
       "createStartMenuShortcut": false,
       "runAfterFinish": false,
-      "shortcutName": "Conquer Overlay",
-      "include": "scripts/installer-selfdelete.nsh"
+      "shortcutName": "Conquer Overlay"
     },
     "linux": {
       "target": [
