@@ -1,0 +1,48 @@
+/* ── Active Watch Status Bar ── */
+.watch-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+
+.watch-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.watch-dot.active {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: watch-pulse 1.5s infinite;
+}
+@keyframes watch-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.watch-text { flex: 1; font-size: 12px; color: var(--text-dim); }
+.watch-text strong { color: var(--text); }
+
+/* ── Danger Button (Stop Watch) ── */
+.btn-danger {
+  padding: 3px 7px;
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  border-radius: 3px;
+  color: #ff8888;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── History-based Max Price Row ── */
+.history-price-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  gap: 6px;
+  align-items: end;
+  margin-bottom: 8px;
+}

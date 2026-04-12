@@ -4,94 +4,11 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none';" />
   <title>Automation Buffs</title>
-  <style>
-    :root {
-      --gold: #c8a84b;
-      --green: #4caf72;
-      --orange: #d6892d;
-      --red: #c43c3c;
-      --bg: rgba(10, 10, 16, 0.8);
-      --card: rgba(18, 18, 28, 0.92);
-      --border: rgba(200,168,75,0.26);
-      --text: #e0e0ea;
-      --text-dim: #9a9ab2;
-      --mono: Consolas, 'Courier New', monospace;
-      --ui: 'Segoe UI', Tahoma, sans-serif;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: transparent;
-      color: var(--text);
-      font-family: var(--ui);
-      overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    #root {
-      width: 100%;
-      height: 100%;
-      padding: 6px;
-    }
-    .buff-shell {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .buff-shell.empty {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--bg);
-      padding: 10px 12px;
-      font-size: 11px;
-      color: var(--text-dim);
-      text-align: center;
-      font-family: var(--mono);
-    }
-    .buff-card {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.25);
-    }
-    .buff-card.paused {
-      border-color: rgba(255,255,255,0.18);
-    }
-    .buff-card.inactive {
-      opacity: 0.58;
-    }
-    .buff-title {
-      font-size: 10px;
-      letter-spacing: 1.6px;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 6px;
-    }
-    .buff-time {
-      font-family: var(--mono);
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
-    .buff-bar {
-      height: 8px;
-      border-radius: 999px;
-      background: var(--card);
-      overflow: hidden;
-    }
-    .buff-bar span {
-      display: block;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, var(--green), var(--gold));
-    }
-    .buff-card.inactive .buff-bar span {
-      background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.28));
-    }
-  </style>
+  <link rel="stylesheet" href="./dist/automation-buffs.css" />
+
 </head>
 <body data-overlay-type="buffs">
   <div id="root"></div>
-  <script type="module" src="../src/hud-renderer.js"></script>
+  <script src="./dist/hud-renderer.js"></script>
 </body>
 </html>

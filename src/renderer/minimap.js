@@ -20,6 +20,7 @@ let _dom, _state;
 export function init(domRef, stateRef) {
   _dom   = domRef;
   _state = stateRef;
+  ensureMapImage(); // preload in background
 }
 
 // ── Map image ─────────────────────────────────────────────────────────────────
@@ -30,7 +31,7 @@ export async function ensureMapImage() {
     const img = new Image();
     img.onload  = () => resolve(img);
     img.onerror = () => resolve(null);
-    img.src = new URL('../../public/assets/street.jpg', import.meta.url).href;
+    img.src = './assets/street.jpg';
   });
   return _state.mapImage;
 }
@@ -283,10 +284,11 @@ function drawMinimap(canvas, items, highlightIdx, pinned = false) {
 
 // ── Popup show / hide ─────────────────────────────────────────────────────────
 
-export function showMinimapPopup(items, highlightIdx, pinned = false) {
+export async function showMinimapPopup(items, highlightIdx, pinned = false) {
   if (!items.length) return;
   _dom.minimapPopup.classList.add('open');
   _dom.minimapPopup.classList.toggle('pinned', pinned);
+  await ensureMapImage();
   drawMinimap(_dom.minimapCanvas, items, highlightIdx, pinned);
   const item = items[highlightIdx];
   if (item?.PositionX != null) {

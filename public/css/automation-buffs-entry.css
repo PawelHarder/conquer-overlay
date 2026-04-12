@@ -1,0 +1,2 @@
+/* Entry point — esbuild bundles automation-buffs styles into public/dist/automation-buffs.css */
+@import './automation-buffs.css';

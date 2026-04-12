@@ -1,0 +1,64 @@
+/* ── Settings Row ── */
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.setting-row label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  min-width: 90px;
+}
+.setting-row input[type="number"] { width: 64px; }
+
+input[type="range"] { flex: 1; accent-color: var(--gold); }
+
+/* Remove number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+/* ── Hotkey Capture Field ── */
+.hotkey-capture {
+  cursor: pointer;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-bright);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hotkey-capture:focus,
+.hotkey-capture.listening {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ── ALT Mode Indicator ── */
+#alt-indicator { display: none; }
+
+/* ── Status Bar ── */
+#statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-deep);
+  flex-shrink: 0;
+}
+.status-text { font-family: var(--mono); font-size: 9px; color: var(--text-dim); }
+.status-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.status-dot.error { background: var(--red); }
+.status-dot.warn  { background: var(--gold); }

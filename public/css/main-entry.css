@@ -1,0 +1,14 @@
+/* Entry point — esbuild bundles all main-app stylesheets into public/dist/main.css */
+@import './variables.css';
+@import './layout.css';
+@import './shared.css';
+@import './server-bar.css';
+@import './autocomplete.css';
+@import './listings.css';
+@import './minimap.css';
+@import './search.css';
+@import './history.css';
+@import './watch.css';
+@import './autoclicker.css';
+@import './settings.css';
+@import './modal.css';

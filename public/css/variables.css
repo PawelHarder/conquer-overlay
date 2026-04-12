@@ -1,0 +1,42 @@
+/* ── CSS Variables — default theme (Original Dark) ── */
+:root {
+  --gold:        #c8a84b;
+  --gold-dim:    #8a6f2a;
+  --gold-bright: #f0cb6a;
+  --red:         #c43c3c;
+  --red-dim:     #7a2020;
+  --green:       #4caf72;
+  --green-dim:   #2a6042;
+
+  /* Background channels (r,g,b) — mixed with --bg-alpha for transparency */
+  --bg-alpha:       1;
+  --bg-deep-rgb:    10,10,14;
+  --bg-panel-rgb:   15,15,22;
+  --bg-card-rgb:    21,21,32;
+  --bg-hover-rgb:   28,28,46;
+  --border-rgb:     42,42,64;
+  --border-gold-rgb:58,46,16;
+
+  --bg-deep:    rgba(var(--bg-deep-rgb),       var(--bg-alpha));
+  --bg-panel:   rgba(var(--bg-panel-rgb),      var(--bg-alpha));
+  --bg-card:    rgba(var(--bg-card-rgb),       var(--bg-alpha));
+  --bg-hover:   rgba(var(--bg-hover-rgb),      var(--bg-alpha));
+  --border:     rgba(var(--border-rgb),         var(--bg-alpha));
+  --border-gold:rgba(var(--border-gold-rgb),   var(--bg-alpha));
+
+  /* Text channels (r,g,b) — mixed with --text-alpha */
+  --text-alpha:  1;
+  --text:        rgba(200,200,216, var(--text-alpha));
+  --text-dim:    rgba(180,180,210, var(--text-alpha));
+  --text-bright: rgba(232,232,248, var(--text-alpha));
+
+  /* Font stacks */
+  --mono:    Consolas, 'Courier New', monospace;
+  --display: 'Palatino Linotype', Georgia, serif;
+  --ui:      'Segoe UI', Tahoma, sans-serif;
+
+  /* Misc */
+  --ui-scale: 1;
+  --radius:   4px;
+  --shadow:   0 8px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(200,168,75,0.15);
+}

@@ -9,13 +9,15 @@
   },
   "main": "src/main.js",
   "scripts": {
+    "bundle": "node esbuild.config.mjs",
+    "bundle:watch": "node esbuild.config.mjs --watch",
     "start": "electron .",
     "start:admin": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$project = (Resolve-Path '.').Path; $electron = (Resolve-Path '.\\node_modules\\electron\\dist\\electron.exe').Path; Start-Process -Verb RunAs -FilePath $electron -ArgumentList @($project) -WorkingDirectory $project\"",
     "dev": "electron . --dev",
     "dev:admin": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$project = (Resolve-Path '.').Path; $electron = (Resolve-Path '.\\node_modules\\electron\\dist\\electron.exe').Path; Start-Process -Verb RunAs -FilePath $electron -ArgumentList @($project, '--dev') -WorkingDirectory $project\"",
-    "build": "electron-builder --win --linux --x64",
-    "build:win": "electron-builder --win --x64",
-    "build:linux": "electron-builder --linux --x64",
+    "build": "npm run bundle && electron-builder --win --linux --x64",
+    "build:win": "npm run bundle && electron-builder --win --x64",
+    "build:linux": "npm run bundle && electron-builder --linux --x64",
     "build:helper:linux": "cargo build --release --manifest-path native-helper/conquer-helper/Cargo.toml",
     "postinstall": "electron-builder install-app-deps"
   },
@@ -29,7 +31,8 @@
   },
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.0.0"
+    "electron-builder": "^24.0.0",
+    "esbuild": "^0.28.0"
   },
   "build": {
     "appId": "com.classicconquer.overlay",

@@ -1,0 +1,89 @@
+      <div class="section-label">Filters</div>
+      <div class="search-form">
+        <div class="field-group">
+          <div class="field-label">Item Name</div>
+          <div class="autocomplete-wrap">
+            <input type="text" id="history-item-name" placeholder="e.g. DragonBall, SkyBlade..." autocomplete="off" />
+            <div class="autocomplete-list" id="history-autocomplete"></div>
+          </div>
+        </div>
+
+        <div class="filter-grid-2">
+          <div class="field-group">
+            <div class="field-label">Category</div>
+            <select id="history-major" title="Filter by item category">
+              <option value="">Any Category</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Minor Class</div>
+            <select id="history-minor" title="Filter by item sub-type">
+              <option value="">Any Minor Class</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-grid-3">
+          <div class="field-group">
+            <div class="field-label">Quality</div>
+            <select id="history-quality" title="Filter by quality tier">
+              <option value="">Any Quality</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">+Level</div>
+            <select id="history-plus" title="Filter by enchantment plus level">
+              <option value="">Any Plus</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Sockets</div>
+            <select id="history-sockets" title="Filter by number of sockets">
+              <option value="">Any</option>
+              <option value="0">No sockets</option>
+              <option value="1">1 socket</option>
+              <option value="2">2 sockets</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:6px;">
+          <button class="btn-clear" id="history-clear" title="Reset all history filters">Clear</button>
+          <button class="btn-primary" id="history-search-btn" title="Load price history records matching the current filters">Load</button>
+        </div>
+      </div>
+
+      <div class="section-label">Time Range</div>
+      <div class="day-filter">
+        <div class="day-btn" data-days="1"  title="Show data from the past 1 day">1d</div>
+        <div class="day-btn" data-days="3"  title="Show data from the past 3 days">3d</div>
+        <div class="day-btn active" data-days="7" title="Show data from the past 7 days">7d</div>
+        <div class="day-btn" data-days="14" title="Show data from the past 14 days">14d</div>
+        <div class="day-btn" data-days="30" title="Show data from the past 30 days">30d</div>
+      </div>
+
+      <div class="section-label" style="justify-content:space-between;">
+        Price Trend
+        <button id="chart-expand-btn" title="Expand chart" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;cursor:pointer;padding:1px 6px;line-height:1;margin-left:auto;transition:all 0.12s;">⤢</button>
+      </div>
+      <div id="history-chart">
+        <canvas id="chart-canvas"></canvas>
+        <div class="chart-placeholder" id="chart-placeholder">Set filters and click Load</div>
+      </div>
+      <div id="chart-tooltip" style="display:none;position:fixed;background:rgba(15,15,22,0.95);border:1px solid var(--gold-dim);border-radius:var(--radius);padding:5px 9px;font-size:10px;color:var(--text);pointer-events:none;z-index:500;white-space:nowrap;"></div>
+
+      <div class="section-label">Stats</div>
+      <div class="price-row">
+        <div class="price-card low">
+          <div class="label">Period Low</div>
+          <div class="value" id="hist-low">—</div>
+        </div>
+        <div class="price-card">
+          <div class="label">Median</div>
+          <div class="value" id="hist-med">—</div>
+        </div>
+        <div class="price-card high">
+          <div class="label">Period High</div>
+          <div class="value" id="hist-high">—</div>
+        </div>
+      </div>

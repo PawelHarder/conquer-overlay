@@ -1,0 +1,102 @@
+/* ── Listings: 5-column grid ── */
+.listings-header,
+.listing-row {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 64px 46px 76px;
+  gap: 0 6px;
+}
+
+.listings-header {
+  display: grid;
+  padding: 4px 8px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-panel);
+}
+
+/* ── Sortable Column Headers ── */
+.listings-header span { cursor: pointer; user-select: none; }
+.listings-header span:hover { color: var(--text); }
+.listings-header span.sort-asc::after  { content: ' ▲'; color: var(--gold); }
+.listings-header span.sort-desc::after { content: ' ▼'; color: var(--gold); }
+
+.listing-row {
+  display: grid;
+  padding: 5px 8px;
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  margin-bottom: 2px;
+  transition: border-color 0.1s, background 0.1s;
+  cursor: pointer;
+}
+.listing-row:nth-child(even) { background: var(--bg-deep); }
+.listing-row:hover { border-color: var(--border); background: var(--bg-hover); }
+.listing-row.pinned {
+  border-color: var(--gold-dim);
+  background: rgba(58, 46, 16, 0.45);
+}
+
+.listing-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.listing-seller {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.listing-quality {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.listing-pos {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+}
+.listing-price {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.listing-per-plus {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0;
+}
+
+/* ── Scrollable Result Container ── */
+.listings-wrap {
+  overflow-y: auto;
+  max-height: 250px;
+  margin-bottom: 8px;
+}
+.listings-wrap::-webkit-scrollbar { width: 4px; }
+.listings-wrap::-webkit-scrollbar-track { background: var(--bg-deep); }
+.listings-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+#search-results,
+#watch-matches { overflow: visible; }

@@ -1,0 +1,2 @@
+/* Entry point — esbuild bundles automation-hud styles into public/dist/automation-hud.css */
+@import './automation-hud.css';

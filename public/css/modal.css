@@ -1,0 +1,37 @@
+/* ── Deal Alert Popup ── */
+#alert-popup {
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #1a2a0a, #0e1a08);
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  display: none;
+  box-shadow: 0 0 20px rgba(76, 175, 114, 0.3);
+  z-index: 100;
+  min-width: 280px;
+  animation: slideUp 0.3s ease;
+}
+#alert-popup.show { display: block; }
+
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(10px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);   opacity: 1; }
+}
+
+.alert-title { font-family: var(--display); font-size: 11px; color: var(--green); letter-spacing: 2px; margin-bottom: 6px; }
+.alert-item  { font-size: 13px; color: var(--text-bright); margin-bottom: 2px; }
+.alert-price { font-family: var(--mono); font-size: 14px; color: var(--gold); }
+
+/* ── Chart Expand Modal ── */
+#chart-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 400;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,127 @@
+/* ── Section Labels ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-label.calc-toggle { cursor: pointer; }
+.section-label.calc-toggle:hover { color: var(--text); }
+
+/* ── Price Summary Row ── */
+.price-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.price-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  text-align: center;
+}
+.price-card .label {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.price-card .value {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--gold);
+}
+.price-card.low  .value { color: var(--green); }
+.price-card.high .value { color: var(--red); }
+
+/* ── Placeholder Text ── */
+.placeholder-text {
+  padding: 16px 0;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+/* ── Plus Calculator ── */
+.calc-table {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.calc-header-row {
+  display: grid;
+  grid-template-columns: 32px 52px 1fr;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.calc-row {
+  display: grid;
+  grid-template-columns: 32px 52px 1fr;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(var(--border-rgb), 0.4);
+  align-items: center;
+  transition: background 0.1s;
+}
+.calc-row:last-child { border-bottom: none; }
+.calc-row.calc-current { background: rgba(var(--border-gold-rgb), 0.5); }
+.calc-plus-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.calc-row.calc-current .calc-plus-label { color: var(--gold-bright); }
+.calc-mult {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.calc-price-val {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  text-align: right;
+}
+.calc-row.calc-current .calc-price-val { color: var(--gold); font-weight: 700; }
+.calc-empty {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ── Loading Spinner ── */
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

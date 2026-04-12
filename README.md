@@ -1,64 +1,145 @@
-# Conquer Market Overlay
+# Conquer Overlay
 
-An always-on-top transparent overlay for **Classic Conquer Online** (`conqueronline.net`) that lets you check market prices, view price history, and set deal alerts — all without leaving the game.
+An always-on-top transparent overlay for **Classic Conquer Online** ([conqueronline.net](https://conqueronline.net)) built with Electron. Search the in-game market, track price history, set deal alerts, and run automation — all without leaving the game window.
 
 ---
 
 ## Features
 
-| Feature | Description |
+### Market Search
+
+Search active market listings by item name with autocomplete, and filter by category, quality, plus level, socket count, and server. Results display with sortable columns, price summaries (lowest / average / highest), and a gold-shorthand input parser (e.g. `1.5k` → `1,500`).
+
+### Price History
+
+Canvas-rendered line chart showing price trends over selectable time ranges (1, 3, 7, 14, or 30 days). Data is stored locally in SQLite via a background poller. Hover for tooltips; click to expand the chart in a modal.
+
+### Deal Watch
+
+Set a target item and maximum price. The app polls the market and triggers a sound alert when a matching listing appears. Matched items are shown in a separate **Watch Overlay** notification window with item details and per-plus pricing.
+
+### Automation / Clicker
+
+Profile-based automation system with:
+
+- **Click automation** — left-click, right-click, and F7 key at configurable intervals with jitter
+- **Modifier hold** — hold Shift or Ctrl continuously while enabled
+- **13 configurable hotkeys** per profile — clicker toggles, buff activators, buff pausers, emergency stop
+- **Game target attachment** — match by process name, window title, or manual selection
+- **Profile management** — create, duplicate, rename, delete, import/export as JSON
+
+### Buff Timers
+
+Three default buff timers (Stigma, Shield, Invisibility) with configurable durations, two-stage warnings, and countdown/countup modes. Each buff can be activated and paused via hotkey. Active buff timers are rendered as progress bars in a dedicated **Buff Overlay** window.
+
+### HUD & Buff Overlays
+
+Two additional always-on-top windows rendered independently from the main overlay:
+
+- **HUD Overlay** — compact chip display showing the state of each automation toggle (MST, LMB, RMB, F7, SHFT, CTRL)
+- **Buff Overlay** — countdown bars for active buff timers with warning color stages
+
+Both overlays support configurable opacity, position offsets, and can anchor relative to the game window or the screen work area.
+
+### Market Minimap
+
+Isometric projection of the in-game marketplace map. Hover a listing row to see the seller's stall location with dot highlighting and stall label. Click a row to pin the minimap view.
+
+### Plus Calculator
+
+Enter a count of +1 items to see how many higher-plus items can be crafted via greedy decomposition (+9 → +5 → +1 remainder breakdown).
+
+### Appearance
+
+- **6 themes** — Original Dark, Midnight Blue, Obsidian, Smokey, Parchment, Light
+- **7 font pairings** — Classic, Scholar, Terminal, Modern, Old English, Humanist, Sharp
+- **Opacity** — separate window opacity and text opacity sliders
+- **UI scale** — 0.9× to 1.2×
+
+### Interaction Model
+
+The overlay uses `alwaysOnTop: 'screen-saver'` (highest z-level) and is fully click-through by default. Press the interact hotkey to toggle mouse interaction on/off.
+
+---
+
+## Keyboard Shortcuts
+
+All app-level shortcuts are configurable in the Settings tab.
+
+| Default | Action |
 |---|---|
-| **Tooltip Scan** | Press `Alt+S` to OCR the item tooltip on screen → auto-fills price check |
-| **Price Check** | Lowest / Average / Highest prices + active listings for scanned item |
-| **Price History** | Trend chart filterable to 1, 3, 7, 14, 30 days |
-| **Deal Watch** | Background polling for a specific item below your max price — plays a sound alert |
-| **Manual Search** | Search by name, category, quality, max price |
-| **Click-through** | Window is fully transparent to mouse by default — hold `Alt` to interact |
-| **Collapse** | Press `Alt+C` or click ▲ to collapse to title bar only |
-| **Automation Scaffold** | Development-stage automation service with profiles, helper diagnostics, runtime toggles, buff timers, and helper-driven overlay windows |
+| `F8` | Toggle interactive mode (click-through ↔ interactive) |
+| `Alt+C` | Collapse / expand to title bar |
+| `Alt+H` | Hide / show the overlay |
+| `Alt+Q` | Quit the application |
+
+Automation hotkeys (13 per profile) are configured in the Clicker tab. Defaults include `MouseMiddle` for master toggle, `F1`–`F3` for buff activation, and `Escape` for emergency stop.
 
 ---
 
 ## Setup
 
 ### Prerequisites
+
 - [Node.js](https://nodejs.org) v18+
 - [Git](https://git-scm.com)
 
 ### Install
 
 ```bash
-git clone <repo>
+git clone <repo-url>
 cd conquer-overlay
 npm install
 ```
 
-### Run (development)
+### Bundle
+
+Build the renderer and CSS bundles before first run:
 
 ```bash
-npm run dev
+npm run bundle
 ```
 
-This opens the overlay with DevTools attached for debugging.
+### Run
 
-### Build (Windows executable)
-
-```bash
-npm run build
-```
-
-Output in `dist/`.
+| Command | Description |
+|---|---|
+| `npm start` | Launch the overlay |
+| `npm run start:admin` | Launch with administrator privileges (required for automation input injection on Windows) |
+| `npm run dev` | Launch with DevTools attached |
+| `npm run dev:admin` | Launch with DevTools + admin privileges |
+| `npm run bundle:watch` | Rebuild bundles on file change |
 
 ---
 
-## Keyboard Shortcuts
+## Building
 
-| Shortcut | Action |
-|---|---|
-| `Alt + S` | Scan tooltip under cursor |
-| `Alt + C` | Collapse / expand overlay |
-| `Alt + H` | Hide / show overlay entirely |
-| Hold `Alt` | Enable mouse interaction with overlay |
+### Windows
+
+```bash
+npm run build:win
+```
+
+Produces an NSIS installer in `dist/`. The packaged app requests administrator privileges at launch (required for automation input injection).
+
+### Linux
+
+The Linux build requires the Rust-based automation helper to be compiled first:
+
+```bash
+# Install X11 development libraries (Debian/Ubuntu)
+sudo apt install libx11-dev libxtst-dev libxi-dev libxrandr-dev libxcb1-dev
+
+# Build the native helper
+npm run build:helper:linux
+
+# Build the Electron app
+npm run build:linux
+```
+
+Produces an AppImage and a `.deb` package in `dist/`.
+
+A `beforePack` build hook validates that the platform-specific helper binary exists before packaging.
 
 ---
 
@@ -67,75 +148,93 @@ Output in `dist/`.
 ```
 conquer-overlay/
 ├── src/
-│   ├── main.js        ← Electron main process
-│   │                     Window creation, always-on-top, click-through,
-│   │                     global shortcuts, IPC handlers, screen capture
-│   ├── preload.js     ← Secure IPC bridge (contextIsolation)
-│   ├── renderer.js    ← All UI logic, state, API calls, chart drawing
-│   ├── api.js         ← conqueronline.net/api/v1 wrapper
-│   └── ocr.js         ← Tesseract.js OCR + tooltip parser
-└── public/
-    └── index.html     ← Overlay UI (dark game aesthetic)
+│   ├── main.js                        ← Main-process orchestrator (~40 lines)
+│   ├── main/
+│   │   ├── window-manager.js          ← Window creation, overlays, shutdown
+│   │   ├── hotkey-manager.js          ← Global shortcuts, interactive mode
+│   │   ├── ipc-handlers.js            ← All IPC registrations
+│   │   ├── state-store.js             ← Persisted window state & hotkeys
+│   │   ├── db-queries.js              ← SQLite price-history queries
+│   │   ├── automation-setup.js        ← Helper process init & cleanup
+│   │   └── market-client.js           ← HTTP market API proxy
+│   │
+│   ├── renderer.js                    ← Renderer orchestrator
+│   ├── renderer/
+│   │   ├── state.js                   ← Shared state object
+│   │   ├── dom-refs.js                ← Cached DOM references
+│   │   ├── ui.js                      ← Tabs, collapse, window drag
+│   │   ├── search.js                  ← Market search & results
+│   │   ├── history.js                 ← Price history chart
+│   │   ├── watch.js                   ← Deal watch polling
+│   │   ├── autoclicker.js             ← Automation UI
+│   │   ├── settings.js                ← Settings tab
+│   │   ├── themes.js                  ← Theme & font system
+│   │   ├── minimap.js                 ← Isometric market map
+│   │   ├── chart.js                   ← Canvas chart renderer
+│   │   ├── filters.js                 ← Category filter metadata
+│   │   ├── listings.js                ← Listing row rendering
+│   │   ├── plus-calculator.js         ← +1 item decomposition
+│   │   ├── price-inputs.js            ← Gold shorthand inputs
+│   │   ├── hotkey-capture.js          ← Hotkey binding UI
+│   │   ├── tab-loader.js             ← HTML partial injection
+│   │   └── utils.js                   ← Shared utilities
+│   │
+│   ├── preload.js                     ← Secure IPC bridge (contextIsolation)
+│   ├── api.js                         ← Market API client
+│   ├── automation-contracts.js        ← Automation schemas & defaults
+│   ├── automation-service.js          ← Core automation orchestrator
+│   ├── automation-helper-client.js    ← Helper child-process RPC client
+│   ├── profile-store.js               ← Automation profile CRUD & persistence
+│   ├── hud-window.js                  ← Overlay window factory
+│   └── hud-renderer.js               ← HUD & buff overlay renderer
+│
+├── public/
+│   ├── index.html                     ← Main overlay shell
+│   ├── automation-hud.html            ← HUD overlay
+│   ├── automation-buffs.html          ← Buff overlay
+│   ├── watch-overlay.html             ← Watch notification overlay
+│   ├── partials/                      ← Tab HTML fragments (search, history, watch, autoclicker, settings)
+│   ├── css/                           ← Component CSS files + entry bundles
+│   ├── assets/                        ← Market minimap image
+│   └── dist/                          ← esbuild output (gitignored)
+│
+├── collector/
+│   ├── poller.js                      ← Background market data poller (30 min interval)
+│   ├── db.js                          ← SQLite schema & insert/prune logic
+│   └── db_query_runner.js             ← Child-process query fallback
+│
+├── native-helper/
+│   ├── conquer-helper-spike.ps1       ← Windows automation helper (PowerShell)
+│   └── conquer-helper/                ← Linux automation helper (Rust, x11rb + xtest)
+│
+├── scripts/
+│   └── before-pack.js                 ← Build hook: validates helper binary exists
+│
+└── esbuild.config.mjs                ← JS (IIFE) & CSS bundler config
 ```
+
+### Build Pipeline
+
+1. **esbuild** bundles `src/renderer.js` and `src/hud-renderer.js` into IIFE scripts under `public/dist/`, and merges CSS component files into four entry bundles (main, watch overlay, HUD, buffs). An `htmlTextPlugin` inlines HTML partials as JS string exports to avoid `fetch()` on `file://`.
+2. **electron-builder** packages the app as an NSIS installer (Windows) or AppImage/DEB (Linux), embedding the platform-specific automation helper in the app resources.
 
 ---
 
-## ⚠️ Completing the API Integration
+## Data Collection
 
-The API endpoints were reverse-engineered from the site's JS bundle. There is **no official documentation**. Before the app will work correctly, you need to confirm the actual request/response shapes using browser DevTools:
+Price history is currently collected by a local poller (`collector/poller.js`) that snapshots the market every 30 minutes into a SQLite database. The poller is a standalone Node script intended for development and self-hosting:
 
-### Steps
-
-1. Open [https://conqueronline.net/Community/Market](https://conqueronline.net/Community/Market) in Chrome
-2. Open DevTools → **Network** tab → filter by `api`
-3. Use the market filters and search — watch the API calls fire
-4. Note the **exact query parameter names** and **response JSON field names**
-
-### Key things to confirm
-
-| File | What to update |
-|---|---|
-| `src/api.js` | Query parameter names in `getListings()`, `getPriceSummary()`, etc. |
-| `src/renderer.js` | Field names in `renderPriceSummary()` — `data.lowest` vs `data.minPrice` etc. |
-| `src/renderer.js` | Field names in `renderListings()` — `item.SellerName`, `item.Price` etc. |
-| `src/api.js` | `getPriceHistory()` — check if a true history endpoint exists |
-
-The field names used in the HTML template on the market page give a strong hint:
+```bash
+node collector/poller.js
 ```
-{{item.QualityName}}  {{item.AdditionLevel}}  {{item.Gem1}}  {{item.Gem2}}
-{{item.SellerName}}   {{item.Price | humanize}}
-```
-These match what's already used in `renderer.js`.
 
----
-
-## OCR Tuning
-
-The OCR uses **Tesseract.js** with a tooltip border color detection heuristic. If the tooltip isn't detected:
-
-1. Take a screenshot of a tooltip in-game
-2. Use a color picker to get the exact RGB of the tooltip's outer border
-3. Update `BORDER_R`, `BORDER_G`, `BORDER_B` ranges in `src/ocr.js → findTooltipRegion()`
-
-### Alternative: Memory Reading
-
-If OCR is too unreliable (pixel fonts can be tricky), a more robust approach is to read item data directly from game memory using a native addon:
-
-- [`node-ffi-napi`](https://github.com/node-ffi-napi/node-ffi-napi) — call Windows API from Node
-- Find item struct offsets using a debugger/Cheat Engine (see [github.com/conquer-online](https://github.com/conquer-online) for packet/struct research)
-- This gives you perfect structured data with zero OCR errors
+A hosted database is planned so that all users can access shared price history without running the poller locally.
 
 ---
 
 ## Notes
 
-- The overlay uses `alwaysOnTop: 'screen-saver'` — the highest z-order level in Windows, which keeps it above the game even in fullscreen-windowed mode
-- Market data freshness can be checked via `/api/v1/sync/status`
-- The deal watch polls at the configured interval (default 15s) — don't set it too low or you may get rate-limited
-
-## Automation Status
-
-- The repository now includes a development-stage automation subsystem in the Electron app plus a PowerShell helper spike under `native-helper/`.
-- Current implementation covers profile persistence, helper supervision, runtime toggles, buff timer state, helper diagnostics, dedicated HUD/buff overlay windows, and helper-side hotkey polling for the default bindings.
-- The current helper is still a spike, not the final native executable. The long-term target remains a dedicated Windows helper binary.
-- Packaged builds now include the `native-helper/` directory so the helper assets are available outside the repository.
+- The overlay sits above all other windows including fullscreen-windowed games, using the `screen-saver` always-on-top level
+- Windows builds request administrator privileges — this is required for the automation helper to inject input into the game process
+- The automation helper for Windows is currently a PowerShell script (`conquer-helper-spike.ps1`); the long-term target is a compiled native binary
+- The Linux helper is a compiled Rust binary using x11rb and xtest for input injection

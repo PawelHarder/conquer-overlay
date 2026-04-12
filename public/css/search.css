@@ -1,0 +1,92 @@
+/* ── Search Form ── */
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ── Form Inputs ── */
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-bright);
+  font-family: var(--ui);
+  font-size: 13px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus,
+select:focus   { border-color: var(--gold-dim); }
+select option  { background: var(--bg-panel); }
+
+.search-row { display: grid; grid-template-columns: 1fr 120px; gap: 8px; }
+
+/* ── Primary Action Button ── */
+.btn-primary {
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-primary:hover {
+  background: var(--bg-hover);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+/* ── Clear Button ── */
+.btn-clear {
+  padding: 3px 7px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: var(--ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn-clear:hover { color: var(--red); border-color: var(--red-dim); }
+
+/* ── Price Input with Currency Hint ── */
+.price-input-wrap { position: relative; }
+.price-input-wrap input { padding-right: 32px; }
+.price-input-wrap .currency-hint {
+  position: absolute;
+  right: 8px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-dim);
+  pointer-events: none;
+}

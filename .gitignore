@@ -5,5 +5,8 @@ data/
 collector/*.db
 *.log
 
+# esbuild output
+public/dist/
+
 # Rust build artifacts
 native-helper/conquer-helper/target/

@@ -1,0 +1,2 @@
+/* Entry point — esbuild bundles watch-overlay styles into public/dist/watch-overlay.css */
+@import './watch-overlay.css';
