@@ -108,7 +108,9 @@ function normalizeListings(items) {
 }
 
 function filterListings(items, opts = {}) {
-  const search = normalizeText(opts.search);
+  const searchRaw = normalizeText(opts.search);
+  const isPartial = searchRaw.startsWith('~');
+  const search = isPartial ? searchRaw.slice(1) : searchRaw;
   const server = normalizeText(opts.server);
   const majorType = normalizeText(opts.majorType);
   const minorType = normalizeText(opts.minorType);
@@ -120,19 +122,23 @@ function filterListings(items, opts = {}) {
   const minPrice = isNumberLike(opts.minPrice) ? Number(opts.minPrice) : null;
   const maxPrice = isNumberLike(opts.maxPrice) ? Number(opts.maxPrice) : null;
   const plusLevel = isNumberLike(opts.plusLevel) ? Number(opts.plusLevel) : null;
+  const plusAny = Boolean(opts.plusAny);
 
   return normalizeListings(items).filter(item => {
-    if (search && !includesText(item.AttributeName, search)) return false;
+    if (search) {
+      const nameNorm = normalizeText(item.AttributeName);
+      if (isPartial ? !nameNorm.includes(search) : nameNorm !== search) return false;
+    }
     if (server && !includesText(item.ServerName || 'Classic_US', server)) return false;
-    if (majorType && !includesText(item.ItemMajorClass, majorType)) return false;
+    if (majorType && normalizeText(item.ItemMajorClass) !== majorType) return false;
     if (minorType === '__weapon_1h__') {
       if (!WEAPON_1H_CLASSES.has(item.ItemMinorClass)) return false;
     } else if (minorType === '__weapon_2h__') {
       if (!WEAPON_2H_CLASSES.has(item.ItemMinorClass)) return false;
     } else if (minorType) {
-      if (!includesText(item.ItemMinorClass, minorType)) return false;
+      if (normalizeText(item.ItemMinorClass) !== minorType) return false;
     }
-    if (quality && !includesText(item.QualityName, quality)) return false;
+    if (quality && normalizeText(item.QualityName) !== quality) return false;
     if (seller && !includesText(item.SellerName, seller)) return false;
     if (gem1 && !includesText(item.Gem1, gem1)) return false;
     if (gem2 && !includesText(item.Gem2, gem2)) return false;
@@ -140,6 +146,7 @@ function filterListings(items, opts = {}) {
     if (sockets === 1 && !(item.Gem1 !== 'None' && item.Gem2 === 'None')) return false;
     if (sockets === 2 && !(item.Gem1 !== 'None' && item.Gem2 !== 'None')) return false;
     if (plusLevel !== null && Number(item.AdditionLevel) !== plusLevel) return false;
+    if (plusAny && Number(item.AdditionLevel) === 0) return false;
     if (minPrice !== null && Number(item.Price) < minPrice) return false;
     if (maxPrice !== null && Number(item.Price) > maxPrice) return false;
     return true;
@@ -381,5 +388,8 @@ export function watchForDeal(filtersOrItemName, maxPriceOrOnMatch, onMatchOrInte
   }
 
   poll();
-  return () => { stopped = true; };
+  return {
+    cancel: () => { stopped = true; },
+    reset:  () => { knownIds = new Set(); },
+  };
 }

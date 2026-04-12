@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none';" />
+  <title>Watch Overlay</title>
+  <style>
+    :root {
+      --gold:     #c8a84b;
+      --gold-dim: rgba(200,168,75,0.22);
+      --green:    #4caf72;
+      --red:      #c43c3c;
+      --bg:       rgba(10, 10, 16, 0.90);
+      --border:   rgba(200,168,75,0.26);
+      --text:     #d9d9e6;
+      --text-dim: #8f8faa;
+      --mono:     Consolas, 'Courier New', monospace;
+      --ui:       'Segoe UI', Tahoma, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 340px;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--ui);
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      padding: 6px 6px 0;
+    }
+
+    /* Header bar */
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 22px;
+      margin-bottom: 5px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s;
+    }
+    #header.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .hdr-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 9px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-family: var(--mono);
+    }
+    .pulse-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 4px var(--green);
+      flex-shrink: 0;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1;    }
+      50%       { opacity: 0.25; }
+    }
+    .clear-all-btn {
+      font-size: 9px;
+      font-family: var(--mono);
+      letter-spacing: 0.3px;
+      background: var(--gold-dim);
+      border: 1px solid rgba(200,168,75,0.35);
+      border-radius: 3px;
+      color: var(--text-dim);
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+      line-height: 1.6;
+    }
+    .clear-all-btn:hover {
+      background: rgba(200,168,75,0.3);
+      color: var(--gold);
+    }
+
+    /* Notification stack */
+    #notif-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 548px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--gold-dim) transparent;
+    }
+    #notif-list::-webkit-scrollbar       { width: 3px; }
+    #notif-list::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+    /* Notification card — single slim row */
+    .notif-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 6px 6px 0;
+      padding: 5px 26px 5px 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      animation: slideIn 0.16s ease-out;
+      min-width: 0;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(-16px); opacity: 0; }
+      to   { transform: translateX(0);     opacity: 1; }
+    }
+    .notif-card.removing {
+      animation: slideOut 0.14s ease-in forwards;
+      pointer-events: none;
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0);     opacity: 1; max-height: 40px; }
+      to   { transform: translateX(-16px); opacity: 0; max-height: 0;    padding-top: 0; padding-bottom: 0; }
+    }
+
+    /* Left: item name */
+    .notif-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1 1 0;
+      min-width: 0;
+      line-height: 1.4;
+    }
+
+    /* Right: seller · pos · price */
+    .notif-right {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+      font-size: 9px;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .notif-seller {
+      max-width: 72px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .notif-dot {
+      color: rgba(143,143,170,0.4);
+      flex-shrink: 0;
+    }
+    .notif-pos {
+      color: rgba(143,143,170,0.65);
+      flex-shrink: 0;
+    }
+    .notif-price {
+      color: var(--gold);
+      font-weight: 600;
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-left: 1px;
+    }
+    .notif-per-plus {
+      color: rgba(200,168,75,0.55);
+      font-size: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Per-card dismiss */
+    .notif-close {
+      position: absolute;
+      top: 5px; right: 5px;
+      width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 9px;
+      cursor: pointer;
+      border-radius: 2px;
+      padding: 0;
+      transition: color 0.1s, background 0.1s;
+      line-height: 1;
+    }
+    .notif-close:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.09);
+    }
+
+    /* NEW badge */
+    .new-badge {
+      display: inline-block;
+      background: var(--green);
+      color: #000;
+      font-size: 7px;
+      font-family: var(--mono);
+      font-weight: bold;
+      padding: 1px 3px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <div class="hdr-left">
+      <div class="pulse-dot"></div>
+      Watch Alerts
+    </div>
+    <button class="clear-all-btn" id="clear-all-btn">Clear all &#x2715;</button>
+  </div>
+  <div id="notif-list"></div>
+
+  <script src="watch-overlay.js"></script>
+</body>
+</html>

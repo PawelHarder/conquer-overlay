@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
@@ -33,6 +33,8 @@ let automationService = null;
 let isShuttingDown = false;
 let automationHudWindow = null;
 let automationBuffWindow = null;
+let watchOverlayWindow = null;
+let pendingWatchData = null;
 
 // ── DB access (read-only) for history/watch queries ──────────────────────────
 let db = null;
@@ -286,6 +288,12 @@ function persistCurrentWindowPosition() {
   saveOverlayState({ x, y });
 }
 
+let positionSaveTimer = null;
+function debouncePersistPosition() {
+  clearTimeout(positionSaveTimer);
+  positionSaveTimer = setTimeout(persistCurrentWindowPosition, 300);
+}
+
 function sendRendererEvent(channel, payload) {
   for (const window of getAutomationRendererWindows()) {
     if (!window || window.isDestroyed()) continue;
@@ -411,6 +419,38 @@ function createAutomationOverlayWindows() {
   });
 }
 
+function createWatchOverlay() {
+  const preloadPath = path.join(__dirname, 'preload.js');
+  watchOverlayWindow = createHudWindow({
+    htmlFile: path.join(__dirname, '../public/watch-overlay.html'),
+    preloadPath,
+    width: 340,
+    height: 580,
+  });
+
+  // The watch overlay must always receive mouse events so the dismiss button works.
+  // Override the click-through defaults set by createHudWindow.
+  watchOverlayWindow.setIgnoreMouseEvents(false);
+  watchOverlayWindow.setFocusable(true);
+  watchOverlayWindow.setMovable(true);
+
+  // Every time the window is shown, snap to top-left of the work area
+  // and deliver any pending match data.
+  watchOverlayWindow.on('show', () => {
+    try {
+      const wa = screen.getPrimaryDisplay().workArea;
+      watchOverlayWindow.setPosition(wa.x + 8, wa.y + 38);
+    } catch (_) { /* ignore position errors */ }
+    if (pendingWatchData) {
+      watchOverlayWindow.webContents.send('overlay-show-matches', pendingWatchData);
+    }
+  });
+
+  watchOverlayWindow.on('closed', () => {
+    watchOverlayWindow = null;
+  });
+}
+
 function updateAutomationOverlayWindows(state) {
   if (isShuttingDown) return;
   if (!automationHudWindow || !automationBuffWindow) return;
@@ -455,7 +495,7 @@ async function shutdownApp() {
   isShuttingDown = true;
 
   persistCurrentWindowPosition();
-  for (const window of [automationHudWindow, automationBuffWindow, overlayWindow]) {
+  for (const window of [automationHudWindow, automationBuffWindow, watchOverlayWindow, overlayWindow]) {
     if (!window || window.isDestroyed()) continue;
     try {
       window.destroy();
@@ -465,6 +505,7 @@ async function shutdownApp() {
   }
   automationHudWindow = null;
   automationBuffWindow = null;
+  watchOverlayWindow = null;
   overlayWindow = null;
   if (automationService) {
     try {
@@ -500,6 +541,7 @@ function createOverlay() {
     thickFrame: false,
     hasShadow: false,
     focusable: false,
+    resizable: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -512,7 +554,7 @@ function createOverlay() {
   overlayWindow.setIgnoreMouseEvents(true, { forward: true }); // click-through by default
   overlayWindow.setFocusable(false);
   overlayWindow.setVisibleOnAllWorkspaces(true);
-  overlayWindow.on('moved', persistCurrentWindowPosition);
+  overlayWindow.on('moved', debouncePersistPosition);
   overlayWindow.on('close', persistCurrentWindowPosition);
 
   overlayWindow.loadFile(path.join(__dirname, '../public/index.html'));
@@ -541,6 +583,9 @@ function setInteractiveMode(nextInteractive) {
   isInteractive = nextInteractive;
   overlayWindow.setIgnoreMouseEvents(!isInteractive, { forward: true });
   overlayWindow.setFocusable(isInteractive);
+
+  // NOTE: watchOverlayWindow is intentionally always interactive (never click-through)
+  // so its dismiss button always works regardless of the main window's mode.
 
   if (isInteractive) {
     overlayWindow.focus();
@@ -635,6 +680,7 @@ function toggleVisibility() {
     overlayWindow.hide();
   } else {
     overlayWindow.show();
+    overlayWindow.webContents.send('window-became-visible');
   }
 }
 
@@ -642,7 +688,15 @@ function toggleVisibility() {
 
 function setupIPC() {
   ipcMain.on('resize-window', (_, { width, height }) => {
-    overlayWindow.setSize(width, height, true);
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.setResizable(true);
+      overlayWindow.setSize(width, height, true);
+      overlayWindow.setResizable(false);
+      // Re-apply click-through state — setResizable may touch GWL_STYLE in ways
+      // that can clear WS_EX_TRANSPARENT on some Windows configurations.
+      overlayWindow.setIgnoreMouseEvents(!isInteractive, { forward: true });
+      overlayWindow.setFocusable(isInteractive);
+    }
   });
 
   ipcMain.on('move-window', (_, { x, y }) => {
@@ -767,6 +821,7 @@ function setupIPC() {
     if (!hotkeys || typeof hotkeys !== 'object') return { ok: false };
     saveAppHotkeys(hotkeys);
     reregisterAppShortcuts(loadAppHotkeys());
+    overlayWindow?.webContents.send('app-hotkeys-changed', loadAppHotkeys());
     return { ok: true };
   });
   ipcMain.handle('automation:export-profile-dialog', async () => {
@@ -793,6 +848,40 @@ function setupIPC() {
     automationService.applyProfile(automationService.profileStore.getActiveProfile());
     return imported;
   });
+
+  // ── External URL ────────────────────────────────────────────────────────────
+  ipcMain.on('open-external-url', (_, url) => {
+    if (typeof url !== 'string' || !/^https:\/\//.test(url)) return;
+    shell.openExternal(url);
+  });
+
+  // ── Watch Match Overlay ─────────────────────────────────────────────────────
+  ipcMain.on('watch-match-found', (_, payload) => {
+    if (!watchOverlayWindow || watchOverlayWindow.isDestroyed()) return;
+    const { items, isCollapsed: payloadCollapsed, activeTab } = payload || {};
+    const shouldShow = payloadCollapsed || !overlayWindow?.isVisible() || activeTab !== 'watch';
+    if (!shouldShow) return;
+
+    pendingWatchData = items;
+    try {
+      if (watchOverlayWindow.isVisible()) {
+        // Already visible — send data directly (show event won't re-fire)
+        watchOverlayWindow.webContents.send('overlay-show-matches', items);
+      } else {
+        // show() triggers the 'show' event which delivers pendingWatchData
+        watchOverlayWindow.show();
+      }
+    } catch (err) {
+      console.error('[WatchOverlay] show/send error:', err.message);
+    }
+  });
+
+  ipcMain.on('watch-overlay-dismiss', () => {
+    pendingWatchData = null;
+    if (!watchOverlayWindow || watchOverlayWindow.isDestroyed()) return;
+    watchOverlayWindow.webContents.send('overlay-clear');
+    if (watchOverlayWindow.isVisible()) watchOverlayWindow.hide();
+  });
 }
 
 // ── App Lifecycle ─────────────────────────────────────────────────────────────
@@ -802,6 +891,7 @@ app.whenReady().then(async () => {
   releaseInputModifiersAtStartup();
   createOverlay();
   createAutomationOverlayWindows();
+  createWatchOverlay();
   setupAltToggleTracking();
   setupIPC();
   broadcastAltState();

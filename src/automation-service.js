@@ -192,6 +192,10 @@ class AutomationService extends EventEmitter {
       this.setLastError(error);
     }
 
+    // Always sync the zeroed runtime state so the helper actually stops,
+    // regardless of whether the 'emergency-stop' command succeeded.
+    await this.syncRuntimeToHelper();
+
     this.emit('helper-status', this.state.helperStatus);
     this.emitStateChanged();
     return this.getState();

@@ -19,6 +19,7 @@ const state = {
   server:           '',
   historyDays:      7,
   watchCancel:      null,
+  watchReset:       null,
   isCollapsed:      false,
   altHeld:          false,
   searchItems:      [],
@@ -60,10 +61,12 @@ const dom = {
   searchMinor:         $('search-minor'),
   searchQuality:       $('search-quality'),
   searchPlus:          $('search-plus'),
+  searchPlusAny:       $('search-plus-any'),
   searchSockets:       $('search-sockets'),
   searchMaxPrice:      $('search-maxprice'),
   searchBtn:           $('search-btn'),
   searchClear:         $('search-clear'),
+  searchClearListings: $('search-clear-listings'),
   searchResults:       $('search-results'),
   searchCount:         $('search-count'),
   priceLow:            $('price-low'),
@@ -95,15 +98,16 @@ const dom = {
   watchMinor:          $('watch-minor'),
   watchQuality:        $('watch-quality'),
   watchPlus:           $('watch-plus'),
+  watchPlusAny:        $('watch-plus-any'),
   watchSockets:        $('watch-sockets'),
   watchInterval:       $('watch-interval'),
   watchPriceBasis:     $('watch-price-basis'),
   watchPricePct:       $('watch-price-pct'),
   watchUseHistoryBtn:  $('watch-use-history-btn'),
   watchPrice:          $('watch-price'),
-  watchMinCount:       $('watch-mincount'),
   watchStartBtn:       $('watch-start-btn'),
   watchClear:          $('watch-clear'),
+  watchClearListings:  $('watch-clear-listings'),
   watchDot:            $('watch-dot'),
   watchText:           $('watch-text'),
   watchMatches:        $('watch-matches'),
@@ -195,6 +199,7 @@ const dom = {
   alertPrice:          $('alert-price'),
 
   altIndicator:        $('alt-indicator'),
+  altHint:             $('alt-hint'),
   statusText:          $('status-text'),
   statusDot:           $('status-dot'),
 
@@ -227,7 +232,8 @@ function perPlusHtml(item) {
   if (!lvl || lvl < 2 || lvl > 9) return '';
   const price = Number(item.Price ?? item.price);
   if (!Number.isFinite(price) || price <= 0) return '';
-  return `<span class="listing-per-plus">${formatPrice(Math.round(price / PLUS_DIVISOR[lvl]))}/+1</span>`;
+  const divisor = PLUS_DIVISOR[lvl];
+  return `<span class="listing-per-plus">+${lvl}, ${divisor}x ${formatPrice(Math.round(price / divisor))}/+1</span>`;
 }
 
 function formatPrice(n) {
@@ -505,7 +511,8 @@ function setupAutocomplete(input, listEl) {
   let focusedIndex = -1;
 
   input.addEventListener('input', async () => {
-    const q = input.value.trim().toLowerCase();
+    const raw = input.value;
+    const q = raw.replace(/^~/, '').trim().toLowerCase();
     if (q.length < 2) { listEl.classList.remove('open'); return; }
     await ensurePool();
     const matches = state.itemNamePool.filter(n => n.toLowerCase().includes(q)).slice(0, 10);
@@ -513,10 +520,11 @@ function setupAutocomplete(input, listEl) {
     listEl.innerHTML = matches.map(m => `<div class="autocomplete-item">${escHtml(m)}</div>`).join('');
     listEl.classList.add('open');
     focusedIndex = -1;
+    const prefix = raw.startsWith('~') ? '~' : '';
     listEl.querySelectorAll('.autocomplete-item').forEach(item => {
       item.addEventListener('mousedown', e => {
         e.preventDefault();
-        input.value = item.textContent;
+        input.value = prefix + item.textContent;
         listEl.classList.remove('open');
       });
     });
@@ -527,7 +535,7 @@ function setupAutocomplete(input, listEl) {
     if (!items.length) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); focusedIndex = Math.min(focusedIndex + 1, items.length - 1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); focusedIndex = Math.max(focusedIndex - 1, -1); }
-    else if (e.key === 'Enter' && focusedIndex >= 0) { e.preventDefault(); input.value = items[focusedIndex].textContent; listEl.classList.remove('open'); return; }
+    else if (e.key === 'Enter' && focusedIndex >= 0) { e.preventDefault(); const prefix = input.value.startsWith('~') ? '~' : ''; input.value = prefix + items[focusedIndex].textContent; listEl.classList.remove('open'); return; }
     else if (e.key === 'Escape') { listEl.classList.remove('open'); return; }
     items.forEach((item, i) => item.classList.toggle('focused', i === focusedIndex));
   });
@@ -644,12 +652,24 @@ dom.serverBtns.forEach(btn => {
 // ── Tab Switching ─────────────────────────────────────────────────────────────
 
 function switchTab(tabId) {
+  const prevTab = state.activeTab;
   state.activeTab = tabId;
   dom.tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   dom.btnSettingsTab.classList.toggle('active', tabId === 'settings');
   dom.tabPanels.forEach(p => p.classList.toggle('active', p.id === 'tab-' + tabId));
   hideMinimapPopup();
   if (tabId === 'history') loadHistory();
+  if (tabId === 'watch') {
+    // Switched to watch — hide the separate overlay
+    window.electronAPI?.dismissWatchOverlay?.();
+  } else if (prevTab === 'watch' && state.watchCancel && state.watchItems.length > 0) {
+    // Switched away from watch while watching — show current items in overlay
+    window.electronAPI?.sendWatchMatch?.({
+      items: state.watchItems.slice(0, 20),
+      isCollapsed: state.isCollapsed,
+      activeTab: tabId,
+    });
+  }
 }
 
 dom.tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
@@ -666,18 +686,52 @@ function setCollapsed(val) {
     width:  Math.round(420 * scale),
     height: val ? Math.round(38 * scale) : Math.round(600 * scale),
   });
+  if (val) {
+    // Collapsing — show overlay if watch is active and has items
+    if (state.watchCancel && state.watchItems.length > 0) {
+      window.electronAPI?.sendWatchMatch?.({
+        items: state.watchItems.slice(0, 20),
+        isCollapsed: true,
+        activeTab: state.activeTab,
+      });
+    }
+  } else if (state.activeTab === 'watch') {
+    // Expanding back to watch tab — dismiss overlay
+    window.electronAPI?.dismissWatchOverlay?.();
+  }
 }
 
 dom.btnCollapse.addEventListener('click', () => setCollapsed(!state.isCollapsed));
 dom.btnClose.addEventListener('click', () => { if (window.electronAPI) window.electronAPI.closeApp(); });
 if (window.electronAPI) window.electronAPI.onToggleCollapse(val => setCollapsed(val));
+if (window.electronAPI?.onWindowBecameVisible) {
+  window.electronAPI.onWindowBecameVisible(() => {
+    if (state.activeTab === 'watch' && !state.isCollapsed) {
+      window.electronAPI?.dismissWatchOverlay?.();
+    } else if (state.watchCancel && state.watchItems.length > 0) {
+      // App just became visible but watch is active on a different tab/collapsed
+      window.electronAPI?.sendWatchMatch?.({
+        items: state.watchItems.slice(0, 20),
+        isCollapsed: state.isCollapsed,
+        activeTab: state.activeTab,
+      });
+    }
+  });
+}
 
 // ── ALT Key Tracking ──────────────────────────────────────────────────────────
+
+let interactBinding = 'F8';
+
+function updateInteractHintText() {
+  if (dom.altHint) dom.altHint.textContent = `${interactBinding} toggles interact`;
+}
 
 function setAltToggleState(isEnabled) {
   state.altHeld = isEnabled;
   dom.altIndicator.classList.toggle('active', isEnabled);
-  dom.altIndicator.textContent = isEnabled ? 'Alt+I/F8: click enabled' : 'Alt+I/F8: click-through';
+  dom.altIndicator.textContent = isEnabled ? `${interactBinding}: click enabled` : `${interactBinding}: click-through`;
+  updateInteractHintText();
   const baseFraction = Math.max(0.1, Math.min(1, parseFloat(localStorage.getItem('opacity') ?? '100') / 100));
   applyEffectiveBgAlpha(baseFraction);
 }
@@ -685,6 +739,14 @@ function setAltToggleState(isEnabled) {
 if (window.electronAPI) {
   window.electronAPI.onAltToggle(isEnabled => setAltToggleState(isEnabled));
   window.electronAPI.onDebugMessage(message => setStatus(message, 'warn'));
+  window.electronAPI.getAppHotkeys?.().then(h => {
+    if (h?.interact) interactBinding = h.interact;
+    updateInteractHintText();
+  }).catch(() => {});
+  window.electronAPI.onAppHotkeysChanged?.(h => {
+    if (h?.interact) interactBinding = h.interact;
+    updateInteractHintText();
+  });
 }
 
 document.addEventListener('click', e => {
@@ -838,7 +900,8 @@ async function doSearch() {
   const major     = dom.searchMajor.value;
   const minor     = dom.searchMinor.value;
   const quality   = dom.searchQuality.value;
-  const plusLevel = dom.searchPlus.value !== '' ? parseInt(dom.searchPlus.value, 10) : undefined;
+  const plusAny   = dom.searchPlusAny?.checked ?? false;
+  const plusLevel = !plusAny && dom.searchPlus.value !== '' ? parseInt(dom.searchPlus.value, 10) : undefined;
   const sockets   = dom.searchSockets.value !== '' ? parseInt(dom.searchSockets.value, 10) : undefined;
   const maxPrice  = getRawPrice(dom.searchMaxPrice) ?? undefined;
 
@@ -850,7 +913,7 @@ async function doSearch() {
 
   try {
     const data = await getListings({ search: query, majorType: major, minorType: minor,
-      quality, plusLevel, sockets, maxPrice, server: state.server });
+      quality, plusLevel, plusAny, sockets, maxPrice, server: state.server });
     const items = Array.isArray(data) ? data : (data?.listings ?? data?.items ?? []);
     state.searchItems = sortItems(items, state.searchSort.key, state.searchSort.dir);
     dom.searchCount.textContent = `(${items.length})`;
@@ -866,16 +929,29 @@ async function doSearch() {
 dom.searchBtn.addEventListener('click', doSearch);
 dom.searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
+dom.searchClearListings.addEventListener('click', () => {
+  state.searchItems = [];
+  dom.searchResults.innerHTML = '<div class="placeholder-text">Enter search terms above</div>';
+  dom.searchCount.textContent = '';
+  dom.priceLow.textContent = dom.priceAvg.textContent = dom.priceHigh.textContent = '—';
+  clearPinnedMinimap();
+});
+
 dom.searchClear.addEventListener('click', () => {
   dom.searchInput.value = dom.searchMajor.value = dom.searchMinor.value =
   dom.searchQuality.value = dom.searchPlus.value = dom.searchSockets.value = '';
   dom.searchMaxPrice.value = dom.searchMaxPrice.dataset.raw = '';
+  if (dom.searchPlusAny) { dom.searchPlusAny.checked = false; dom.searchPlus.disabled = false; }
   dom.searchResults.innerHTML = '<div class="placeholder-text">Enter search terms above</div>';
   dom.searchCount.textContent = '';
   dom.priceLow.textContent = dom.priceAvg.textContent = dom.priceHigh.textContent = '—';
   state.searchItems = [];
   clearPinnedMinimap();
   setStatus('Ready', 'ok');
+});
+
+dom.searchPlusAny?.addEventListener('change', () => {
+  dom.searchPlus.disabled = dom.searchPlusAny.checked;
 });
 
 // ── History Tab ───────────────────────────────────────────────────────────────
@@ -986,12 +1062,14 @@ dom.watchUseHistoryBtn.addEventListener('click', async () => {
 });
 
 function buildWatchFilters() {
+  const plusAny = dom.watchPlusAny?.checked ?? false;
   return {
     search:    dom.watchItem.value.trim(),
     majorType: dom.watchMajor.value,
     minorType: dom.watchMinor.value,
     quality:   dom.watchQuality.value,
-    plusLevel: dom.watchPlus.value !== '' ? parseInt(dom.watchPlus.value, 10) : undefined,
+    plusAny,
+    plusLevel: !plusAny && dom.watchPlus.value !== '' ? parseInt(dom.watchPlus.value, 10) : undefined,
     sockets:   dom.watchSockets.value !== '' ? parseInt(dom.watchSockets.value, 10) : undefined,
     maxPrice:  getRawPrice(dom.watchPrice) ?? undefined,
     server:    state.server,
@@ -1001,25 +1079,30 @@ function buildWatchFilters() {
 function startWatch() {
   const filters  = buildWatchFilters();
   const interval = parseInt(dom.watchInterval.value);
-  const minCount = parseInt(dom.watchMinCount.value) || 1;
   if (!filters.search && !filters.majorType && !filters.minorType) { setStatus('Enter an item name or category to watch', 'warn'); return; }
   if (!filters.maxPrice) { setStatus('Enter a max price', 'warn'); return; }
-  if (state.watchCancel) { state.watchCancel(); state.watchCancel = null; }
+  if (state.watchCancel) { state.watchCancel.cancel(); state.watchCancel = null; state.watchReset = null; }
   dom.watchDot.classList.add('active');
   dom.watchText.innerHTML = `Watching <strong>${escHtml(filters.search || filters.majorType || filters.minorType)}</strong> ≤ <strong>${formatPrice(filters.maxPrice)}</strong>`;
   dom.watchStartBtn.textContent = '■ Stop';
   dom.watchStartBtn.style.background = 'var(--red-dim)';
   dom.watchStartBtn.style.borderColor = 'var(--red)';
   setStatus('Watching…', 'ok');
-  state.watchCancel = watchForDeal(filters, matches => {
-    if (matches.length < minCount) return;
+  const handle = watchForDeal(filters, matches => {
     matches.forEach(match => { showDealAlert(match); state.watchItems.unshift(match); });
     renderListings(sortItems(state.watchItems, state.watchSort.key, state.watchSort.dir), dom.watchMatches);
+    window.electronAPI?.sendWatchMatch?.({
+      items: matches,
+      isCollapsed: state.isCollapsed,
+      activeTab: state.activeTab,
+    });
   }, interval);
+  state.watchCancel = handle;
+  state.watchReset  = handle.reset;
 }
 
 function stopWatch() {
-  if (state.watchCancel) { state.watchCancel(); state.watchCancel = null; }
+  if (state.watchCancel) { state.watchCancel.cancel(); state.watchCancel = null; state.watchReset = null; }
   dom.watchDot.classList.remove('active');
   dom.watchText.textContent = 'No active watch';
   dom.watchStartBtn.textContent = '▶ Watch';
@@ -1029,16 +1112,29 @@ function stopWatch() {
 
 dom.watchStartBtn.addEventListener('click', () => { if (state.watchCancel) stopWatch(); else startWatch(); });
 
+dom.watchClearListings.addEventListener('click', () => {
+  state.watchItems = [];
+  state.watchReset?.();   // clear knownIds so existing listings re-appear on next poll
+  dom.watchMatches.innerHTML = '<div class="placeholder-text">Matches will appear here</div>';
+  clearPinnedMinimap();
+  window.electronAPI?.dismissWatchOverlay?.();
+});
+
 dom.watchClear.addEventListener('click', () => {
   stopWatch();
   dom.watchItem.value = dom.watchMajor.value = dom.watchMinor.value =
   dom.watchQuality.value = dom.watchPlus.value = dom.watchSockets.value = '';
-  dom.watchMinCount.value = '';
   dom.watchPrice.value = dom.watchPrice.dataset.raw = '';
   dom.watchPriceBasis.value = dom.watchPricePct.value = '';
+  if (dom.watchPlusAny) { dom.watchPlusAny.checked = false; dom.watchPlus.disabled = false; }
   state.watchItems = [];
   dom.watchMatches.innerHTML = '<div class="placeholder-text">Matches will appear here</div>';
   clearPinnedMinimap();
+  window.electronAPI?.dismissWatchOverlay?.();
+});
+
+dom.watchPlusAny?.addEventListener('change', () => {
+  dom.watchPlus.disabled = dom.watchPlusAny.checked;
 });
 
 function showDealAlert(listing) {
@@ -1699,6 +1795,64 @@ if (window.electronAPI?.automation) {
     pushAutomationLog(formatAutomationDiagnosticEntry(entry));
   });
 }
+
+document.getElementById('btn-support-me')?.addEventListener('click', () => {
+  window.electronAPI?.openExternalUrl?.('https://paypal.me/PKHarder');
+});
+
+// ── Plus Calculator ───────────────────────────────────────────────────────────
+
+(function setupPlusCalculator() {
+  const calcToggle  = document.getElementById('calc-toggle');
+  const calcPanel   = document.getElementById('calc-panel');
+  const calcArrow   = document.getElementById('calc-arrow');
+  const calcCountEl = document.getElementById('calc-count');
+  const calcOutput  = document.getElementById('calc-output');
+
+  if (!calcToggle) return;
+
+  calcToggle.addEventListener('click', () => {
+    const open = calcPanel.style.display !== 'none';
+    calcPanel.style.display = open ? 'none' : 'block';
+    calcArrow.textContent = open ? '▶' : '▼';
+    if (!open) renderCalc();
+  });
+
+  function renderCalc() {
+    const count = parseInt(calcCountEl.value, 10);
+
+    if (!count || count < 1) {
+      calcOutput.innerHTML = '<div class="calc-table"><div class="calc-empty">Enter how many +1 items you have</div></div>';
+      return;
+    }
+
+    // Greedy decomposition from +9 down to +1
+    let remaining = count;
+    const result = [];
+    for (let lvl = 9; lvl >= 1; lvl--) {
+      const cost = PLUS_DIVISOR[lvl];
+      const qty  = Math.floor(remaining / cost);
+      result.push({ lvl, qty, cost });
+      remaining -= qty * cost;
+    }
+
+    const rows = result.map(({ lvl, qty, cost }) => {
+      const active = qty > 0;
+      return `<div class="calc-row${active ? ' calc-current' : ''}">
+        <span class="calc-plus-label">+${lvl}</span>
+        <span class="calc-mult">${active ? `${qty}×` : '—'}</span>
+        <span class="calc-price-val">${active ? (qty * cost).toLocaleString() : ''}</span>
+      </div>`;
+    }).join('');
+
+    calcOutput.innerHTML = `<div class="calc-table">
+      <div class="calc-header-row"><span>+Lvl</span><span>Qty</span><span style="text-align:right">+1s used</span></div>
+      ${rows}
+    </div>`;
+  }
+
+  calcCountEl.addEventListener('input', renderCalc);
+})();
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 

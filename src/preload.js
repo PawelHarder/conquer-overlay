@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App hotkeys
   getAppHotkeys: () => ipcRenderer.invoke('get-app-hotkeys'),
   setAppHotkeys: (hotkeys) => ipcRenderer.invoke('set-app-hotkeys', hotkeys),
+  onAppHotkeysChanged: (cb) => ipcRenderer.on('app-hotkeys-changed', (_, val) => cb(val)),
 
   // Price history DB queries
   queryPriceHistory: (filters) => ipcRenderer.invoke('query-price-history', filters),
@@ -57,4 +58,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onOverlayStatus: (cb) => ipcRenderer.on('automation:overlay-status', (_, status) => cb(status)),
     onDiagnosticLog: (cb) => ipcRenderer.on('automation:diagnostic-log', (_, entry) => cb(entry)),
   },
+
+  // External URL
+  openExternalUrl: (url) => ipcRenderer.send('open-external-url', url),
+
+  // Watch match overlay
+  sendWatchMatch: (data) => ipcRenderer.send('watch-match-found', data),
+  dismissWatchOverlay: () => ipcRenderer.send('watch-overlay-dismiss'),
+  onWindowBecameVisible: (cb) => ipcRenderer.on('window-became-visible', cb),
+
+  // Watch overlay window (used by watch-overlay.html)
+  onWatchOverlayMatches: (cb) => ipcRenderer.on('overlay-show-matches', (_, data) => cb(data)),
+  onWatchOverlayClear: (cb) => ipcRenderer.on('overlay-clear', cb),
 });

@@ -497,6 +497,67 @@
     #tab-settings {
     }
 
+    /* ── Plus Calculator ── */
+    .calc-table {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .calc-header-row {
+      display: grid;
+      grid-template-columns: 32px 52px 1fr;
+      gap: 6px;
+      padding: 4px 8px;
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--border);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .calc-row {
+      display: grid;
+      grid-template-columns: 32px 52px 1fr;
+      gap: 6px;
+      padding: 4px 8px;
+      border-bottom: 1px solid rgba(var(--border-rgb), 0.4);
+      align-items: center;
+      transition: background 0.1s;
+    }
+    .calc-row:last-child { border-bottom: none; }
+    .calc-row.calc-current {
+      background: rgba(var(--border-gold-rgb), 0.5);
+    }
+    .calc-plus-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+    .calc-row.calc-current .calc-plus-label { color: var(--gold-bright); }
+    .calc-mult {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+    .calc-price-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      text-align: right;
+    }
+    .calc-row.calc-current .calc-price-val { color: var(--gold); font-weight: 700; }
+    .calc-empty {
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .section-label.calc-toggle { cursor: pointer; }
+    .section-label.calc-toggle:hover { color: var(--text); }
+
     /* ── Section Labels ── */
     .section-label {
       font-size: 10px;
@@ -875,23 +936,23 @@
           <div class="field-label">Item Name / Keyword</div>
           <div class="search-row">
             <div class="autocomplete-wrap" style="flex:1">
-              <input type="text" id="search-input" placeholder="Search market..." autocomplete="off" />
+              <input type="text" id="search-input" placeholder="Search market..." autocomplete="off" title="Type item name or keyword to search the market" />
               <div class="autocomplete-list" id="search-autocomplete"></div>
             </div>
-            <button class="btn-primary" id="search-btn">Search</button>
+            <button class="btn-primary" id="search-btn" title="Fetch current market listings matching your filters">Search</button>
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div class="field-group">
             <div class="field-label">Category</div>
-            <select id="search-major">
+            <select id="search-major" title="Filter by item category">
               <option value="">All Categories</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label">Minor Class</div>
-            <select id="search-minor">
+            <select id="search-minor" title="Filter by item sub-type within the selected category">
               <option value="">All Minor Classes</option>
             </select>
           </div>
@@ -900,19 +961,24 @@
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
           <div class="field-group">
             <div class="field-label">Quality</div>
-            <select id="search-quality">
+            <select id="search-quality" title="Filter by item quality tier">
               <option value="">All Qualities</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label">+Level</div>
-            <select id="search-plus">
-              <option value="">Any Plus</option>
-            </select>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="search-plus" title="Filter by enchantment plus level" style="flex:1;">
+                <option value="">Any Plus</option>
+              </select>
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;" title="Match any enchanted item (+1 or above)">
+                <input type="checkbox" id="search-plus-any">Any+
+              </label>
+            </div>
           </div>
           <div class="field-group">
             <div class="field-label">Sockets</div>
-            <select id="search-sockets">
+            <select id="search-sockets" title="Filter by number of sockets on the item">
               <option value="">Any Sockets</option>
               <option value="0">No sockets</option>
               <option value="1">1 socket</option>
@@ -925,14 +991,28 @@
           <div class="field-group">
             <div class="field-label">Max Price</div>
             <div class="price-input-wrap">
-              <input type="text" id="search-maxprice" placeholder="No limit" autocomplete="off" />
+              <input type="text" id="search-maxprice" placeholder="No limit" autocomplete="off" title="Only show listings at or below this price (in gold)" />
               <span class="currency-hint">gold</span>
             </div>
           </div>
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:6px;">
-          <button class="btn-clear" id="search-clear">Clear</button>
+          <button class="btn-clear" id="search-clear-listings" title="Clear current results without resetting filters">Clear Listings</button>
+          <button class="btn-clear" id="search-clear" title="Clear all filters and results">Clear</button>
+        </div>
+      </div>
+
+      <div class="section-label calc-toggle" id="calc-toggle" title="+1 Item Decomposition Calculator">
+        ⚡ Plus Calculator <span id="calc-arrow" style="font-size:9px;color:var(--gold-dim);margin-left:-4px;">▶</span>
+      </div>
+      <div id="calc-panel" style="display:none;">
+        <div class="field-group" style="margin-bottom:8px;">
+          <div class="field-label">How many +1 items do you have?</div>
+          <input type="number" id="calc-count" min="1" placeholder="e.g. 6562" style="width:100%;" autocomplete="off" title="Enter the total count of +1 items to see what higher-plus items you can craft" />
+        </div>
+        <div id="calc-output">
+          <div class="calc-table"><div class="calc-empty">Enter how many +1 items you have</div></div>
         </div>
       </div>
 
@@ -987,13 +1067,13 @@
         <div class="filter-grid-2">
           <div class="field-group">
             <div class="field-label">Category</div>
-            <select id="history-major">
+            <select id="history-major" title="Filter by item category">
               <option value="">Any Category</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label">Minor Class</div>
-            <select id="history-minor">
+            <select id="history-minor" title="Filter by item sub-type">
               <option value="">Any Minor Class</option>
             </select>
           </div>
@@ -1002,19 +1082,19 @@
         <div class="filter-grid-3">
           <div class="field-group">
             <div class="field-label">Quality</div>
-            <select id="history-quality">
+            <select id="history-quality" title="Filter by quality tier">
               <option value="">Any Quality</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label">+Level</div>
-            <select id="history-plus">
+            <select id="history-plus" title="Filter by enchantment plus level">
               <option value="">Any Plus</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label">Sockets</div>
-            <select id="history-sockets">
+            <select id="history-sockets" title="Filter by number of sockets">
               <option value="">Any</option>
               <option value="0">No sockets</option>
               <option value="1">1 socket</option>
@@ -1024,18 +1104,18 @@
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:6px;">
-          <button class="btn-clear" id="history-clear">Clear</button>
-          <button class="btn-primary" id="history-search-btn">Load</button>
+          <button class="btn-clear" id="history-clear" title="Reset all history filters">Clear</button>
+          <button class="btn-primary" id="history-search-btn" title="Load price history records matching the current filters">Load</button>
         </div>
       </div>
 
       <div class="section-label">Time Range</div>
       <div class="day-filter">
-        <div class="day-btn" data-days="1">1d</div>
-        <div class="day-btn" data-days="3">3d</div>
-        <div class="day-btn active" data-days="7">7d</div>
-        <div class="day-btn" data-days="14">14d</div>
-        <div class="day-btn" data-days="30">30d</div>
+        <div class="day-btn" data-days="1" title="Show data from the past 1 day">1d</div>
+        <div class="day-btn" data-days="3" title="Show data from the past 3 days">3d</div>
+        <div class="day-btn active" data-days="7" title="Show data from the past 7 days">7d</div>
+        <div class="day-btn" data-days="14" title="Show data from the past 14 days">14d</div>
+        <div class="day-btn" data-days="30" title="Show data from the past 30 days">30d</div>
       </div>
 
       <div class="section-label" style="justify-content:space-between;">
@@ -1073,7 +1153,7 @@
         <div class="field-group">
           <div class="field-label">Item Name</div>
           <div class="autocomplete-wrap">
-            <input type="text" id="watch-item" placeholder="e.g. DragonClaw, Phoenix Armor..." autocomplete="off" />
+            <input type="text" id="watch-item" placeholder="e.g. DragonClaw, Phoenix Armor..." autocomplete="off" title="Item name to watch for on the market" />
             <div class="autocomplete-list" id="watch-autocomplete"></div>
           </div>
         </div>
@@ -1081,13 +1161,13 @@
         <div class="filter-grid-2">
           <div class="field-group">
             <div class="field-label">Category</div>
-            <select id="watch-major">
+            <select id="watch-major" title="Filter watched listings by category">
               <option value="">Any Category</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label">Minor Class</div>
-            <select id="watch-minor">
+            <select id="watch-minor" title="Filter watched listings by sub-type">
               <option value="">Any Minor Class</option>
             </select>
           </div>
@@ -1096,19 +1176,24 @@
         <div class="filter-grid-3">
           <div class="field-group">
             <div class="field-label">Quality</div>
-            <select id="watch-quality">
+            <select id="watch-quality" title="Only alert for matches at this quality or above">
               <option value="">Any Quality</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label">+Level</div>
-            <select id="watch-plus">
-              <option value="">Any Plus</option>
-            </select>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="watch-plus" title="Only alert for items with this enchantment level" style="flex:1;">
+                <option value="">Any Plus</option>
+              </select>
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;" title="Alert for any enchanted item (+1 or above)">
+                <input type="checkbox" id="watch-plus-any">Any+
+              </label>
+            </div>
           </div>
           <div class="field-group">
             <div class="field-label">Sockets</div>
-            <select id="watch-sockets">
+            <select id="watch-sockets" title="Only alert for items with this socket count">
               <option value="">Any</option>
               <option value="0">No sockets</option>
               <option value="1">1 socket</option>
@@ -1117,27 +1202,21 @@
           </div>
         </div>
 
-        <div class="filter-grid-2">
-          <div class="field-group">
-            <div class="field-label">Min Listings</div>
-            <input type="number" id="watch-mincount" placeholder="1" min="1" max="99" />
-          </div>
-          <div class="field-group">
-            <div class="field-label">Poll Interval</div>
-            <select id="watch-interval">
-              <option value="10000">Every 10 sec</option>
-              <option value="15000" selected>Every 15 sec</option>
-              <option value="30000">Every 30 sec</option>
-              <option value="60000">Every 1 min</option>
-            </select>
-          </div>
+        <div class="field-group" style="margin-bottom:8px;">
+          <div class="field-label">Poll Interval</div>
+          <select id="watch-interval" title="How often the market is checked for matching listings">
+            <option value="10000">Every 10 sec</option>
+            <option value="15000" selected>Every 15 sec</option>
+            <option value="30000">Every 30 sec</option>
+            <option value="60000">Every 1 min</option>
+          </select>
         </div>
 
         <div class="section-label">Max Price</div>
         <div class="history-price-row">
           <div class="field-group">
             <div class="field-label">Basis</div>
-            <select id="watch-price-basis">
+            <select id="watch-price-basis" title="Set max price as a fixed value or a percentage below a historical reference">
               <option value="">Manual</option>
               <option value="lowest">% below Lowest</option>
               <option value="average">% below Average</option>
@@ -1145,21 +1224,22 @@
           </div>
           <div class="field-group">
             <div class="field-label">%</div>
-            <input type="number" id="watch-price-pct" placeholder="10" min="0" max="99" />
+            <input type="number" id="watch-price-pct" placeholder="10" min="0" max="99" title="How many percent below the chosen baseline the max price should be set" />
           </div>
           <div class="field-group">
             <div class="field-label">&nbsp;</div>
-            <button class="btn-primary" id="watch-use-history-btn" style="font-size:10px;padding:6px 8px;">Use History</button>
+            <button class="btn-primary" id="watch-use-history-btn" style="font-size:10px;padding:6px 8px;" title="Calculate max price from your saved price history using the chosen basis and percentage">Use History</button>
           </div>
         </div>
         <div class="price-input-wrap">
-          <input type="text" id="watch-price" placeholder="Max price (gold)" autocomplete="off" />
+          <input type="text" id="watch-price" placeholder="Max price (gold)" autocomplete="off" title="Only alert when a matching item is listed at or below this price" />
           <span class="currency-hint">gold</span>
         </div>
 
         <div style="display:flex;justify-content:space-between;margin-top:6px;gap:6px;">
-          <button class="btn-clear" id="watch-clear">Clear</button>
-          <button class="btn-primary" id="watch-start-btn">▶ Watch</button>
+          <button class="btn-clear" id="watch-clear-listings" title="Clear current match results without stopping the watch">Clear Listings</button>
+          <button class="btn-clear" id="watch-clear" title="Clear all watch filters and stop watching">Clear</button>
+          <button class="btn-primary" id="watch-start-btn" title="Start or stop monitoring the market for matching listings">&#9654; Watch</button>
         </div>
       </div>
 
@@ -1194,15 +1274,15 @@
       <div class="automation-card">
         <div class="setting-row" style="margin-bottom:10px;">
           <label>Profile</label>
-          <select id="automation-profile-select"></select>
+          <select id="automation-profile-select" title="Select which automation profile to configure and run"></select>
         </div>
         <div class="automation-actions compact" style="margin-top:0;margin-bottom:10px;grid-template-columns:repeat(2,1fr);">
-          <button class="btn-primary" id="automation-profile-new">New Profile</button>
-          <button class="btn-clear" id="automation-profile-delete">Delete Profile</button>
+          <button class="btn-primary" id="automation-profile-new" title="Create a new empty automation profile">New Profile</button>
+          <button class="btn-clear" id="automation-profile-delete" title="Permanently delete the currently selected profile">Delete Profile</button>
         </div>
         <div class="automation-actions compact" style="margin-top:0;margin-bottom:10px;grid-template-columns:repeat(2,1fr);">
-          <button class="btn-primary" id="automation-profile-export">Export Profile</button>
-          <button class="btn-clear" id="automation-profile-import">Import Profile</button>
+          <button class="btn-primary" id="automation-profile-export" title="Save the selected profile to a file for backup or sharing">Export Profile</button>
+          <button class="btn-clear" id="automation-profile-import" title="Load a previously exported profile from a file">Import Profile</button>
         </div>
         <div class="automation-status-line">
           <span>Helper</span>
@@ -1217,24 +1297,24 @@
           <span class="automation-status-value" id="automation-master-status">OFF</span>
         </div>
         <div class="automation-actions">
-          <button class="btn-primary" id="automation-refresh-btn">Refresh</button>
-          <button class="btn-primary" id="automation-restart-btn">Restart Helper</button>
-          <button class="btn-primary" id="automation-master-btn">Toggle Master</button>
-          <button class="btn-danger" id="automation-stop-btn">Emergency Stop</button>
+          <button class="btn-primary" id="automation-refresh-btn" title="Reload the current automation state from the background service">Refresh</button>
+          <button class="btn-primary" id="automation-restart-btn" title="Restart the native automation helper process">Restart Helper</button>
+          <button class="btn-primary" id="automation-master-btn" title="Enable or disable all automation clicks at once">Toggle Master</button>
+          <button class="btn-danger" id="automation-stop-btn" title="Immediately stop all clicks and release all held keys">Emergency Stop</button>
         </div>
         <div class="automation-actions compact" style="margin-top:10px;">
-          <button class="btn-primary" id="automation-toggle-left">Left</button>
-          <button class="btn-primary" id="automation-toggle-right">Right</button>
-          <button class="btn-primary" id="automation-toggle-f7">F-Key</button>
-          <button class="btn-primary" id="automation-toggle-shift">Shift</button>
-          <button class="btn-primary" id="automation-toggle-ctrl">Ctrl</button>
+          <button class="btn-primary" id="automation-toggle-left" title="Enable or disable the left mouse button auto-click">Left</button>
+          <button class="btn-primary" id="automation-toggle-right" title="Enable or disable the right mouse button auto-click">Right</button>
+          <button class="btn-primary" id="automation-toggle-f7" title="Enable or disable the configured F-key auto-press">F-Key</button>
+          <button class="btn-primary" id="automation-toggle-shift" title="Enable or disable holding Shift during clicks">Shift</button>
+          <button class="btn-primary" id="automation-toggle-ctrl" title="Enable or disable holding Ctrl during clicks">Ctrl</button>
         </div>
       </div>
 
       <div class="automation-card">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Runtime Settings</div>
-        <div class="setting-row"><label>Left ms</label><input type="number" id="automation-left-interval" min="1" value="80" /></div>
-        <div class="setting-row"><label>Right ms</label><input type="number" id="automation-right-interval" min="1" value="120" /></div>
+        <div class="setting-row"><label>Left ms</label><input type="number" id="automation-left-interval" min="1" value="80" title="Delay in milliseconds between left mouse button clicks" /></div>
+        <div class="setting-row"><label>Right ms</label><input type="number" id="automation-right-interval" min="1" value="120" title="Delay in milliseconds between right mouse button clicks" /></div>
         <div class="setting-row"><label>F-Key</label>
           <select id="automation-fkey-code">
             <option value="F1">F1</option>
@@ -1251,8 +1331,8 @@
             <option value="F12">F12</option>
           </select>
         </div>
-        <div class="setting-row"><label>F-Key ms</label><input type="number" id="automation-f7-interval" min="1" value="500" /></div>
-        <div class="setting-row"><label>Jitter %</label><input type="number" id="automation-jitter" min="0" max="100" value="15" /></div>
+        <div class="setting-row"><label>F-Key ms</label><input type="number" id="automation-f7-interval" min="1" value="500" title="Delay in milliseconds between F-key presses" /></div>
+        <div class="setting-row"><label>Jitter %</label><input type="number" id="automation-jitter" min="0" max="100" value="15" title="Adds random variance to all intervals to make clicking less predictable" /></div>
         <button class="btn-primary" id="automation-save-runtime" style="width:100%;margin-top:4px;">Save Runtime Settings</button>
       </div>
 
@@ -1291,7 +1371,7 @@
 
       <div class="setting-row">
         <label>Theme</label>
-        <select id="theme-select">
+        <select id="theme-select" title="Change the colour scheme of the overlay">
           <option value="original-dark" selected>Original Dark</option>
           <option value="midnight-blue">Midnight Blue</option>
           <option value="obsidian">Obsidian</option>
@@ -1303,7 +1383,7 @@
 
       <div class="setting-row">
         <label>UI Scale</label>
-        <select id="ui-scale-select">
+        <select id="ui-scale-select" title="Scale the entire overlay UI up or down">
           <option value="0.9">Small — 90%</option>
           <option value="1" selected>Normal — 100%</option>
           <option value="1.1">Large — 110%</option>
@@ -1313,7 +1393,7 @@
 
       <div class="setting-row">
         <label>Font Pairing</label>
-        <select id="font-pairing-select">
+        <select id="font-pairing-select" title="Change the headline and body font combination">
           <option value="classic" style="font-family:'Segoe UI',sans-serif" selected>Classic — Segoe UI / Palatino</option>
           <option value="scholar" style="font-family:Cambria,serif">Scholar — Cambria / Garamond</option>
           <option value="terminal" style="font-family:Consolas,monospace">Terminal — Consolas / Courier New</option>
@@ -1326,15 +1406,15 @@
 
       <div class="setting-row">
         <label>Overlay Transparency</label>
-        <input type="range" id="opacity-slider" min="10" max="100" value="100" />
-        <input type="number" id="opacity-input" min="10" max="100" value="100" style="width:56px" />
+        <input type="range" id="opacity-slider" min="10" max="100" value="100" title="Adjust overall background transparency of the overlay" />
+        <input type="number" id="opacity-input" min="10" max="100" value="100" style="width:56px" title="Exact transparency value (10–100%)" />
         <span style="font-size:10px;color:var(--text-dim)">%</span>
       </div>
 
       <div class="setting-row">
         <label>Text Transparency</label>
-        <input type="range" id="text-opacity-slider" min="0" max="100" value="100" />
-        <input type="number" id="text-opacity-input" min="0" max="100" value="100" style="width:56px" />
+        <input type="range" id="text-opacity-slider" min="0" max="100" value="100" title="Adjust the transparency of text and icons inside the overlay" />
+        <input type="number" id="text-opacity-input" min="0" max="100" value="100" style="width:56px" title="Exact text transparency value (0–100%)" />
         <span style="font-size:10px;color:var(--text-dim)">%</span>
       </div>
 
@@ -1342,51 +1422,51 @@
       <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">
         Position is saved automatically when you move the window.
       </div>
-      <button class="btn-primary" id="reset-position-btn" style="width:100%">Reset Window Position</button>
+      <button class="btn-primary" id="reset-position-btn" style="width:100%" title="Move the overlay back to the top-left corner of the screen">Reset Window Position</button>
 
       <div class="automation-card" style="margin-top:14px;">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">App Hotkeys</div>
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">Click a field then press any key or combination.</div>
-        <div class="setting-row"><label>Interact Toggle</label><input type="text" class="hotkey-capture" id="app-hotkey-interact" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Collapse</label><input type="text" class="hotkey-capture" id="app-hotkey-collapse" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Hide</label><input type="text" class="hotkey-capture" id="app-hotkey-hide" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Quit App</label><input type="text" class="hotkey-capture" id="app-hotkey-quit" placeholder="Click to bind…" readonly /></div>
-        <button class="btn-primary" id="app-save-hotkeys" style="width:100%;margin-top:4px;">Save App Hotkeys</button>
+        <div class="setting-row"><label>Interact Toggle</label><input type="text" class="hotkey-capture" id="app-hotkey-interact" placeholder="Click to bind…" readonly title="Hotkey to switch between click-through and interactive mode" /></div>
+        <div class="setting-row"><label>Collapse</label><input type="text" class="hotkey-capture" id="app-hotkey-collapse" placeholder="Click to bind…" readonly title="Hotkey to collapse or expand the overlay" /></div>
+        <div class="setting-row"><label>Hide</label><input type="text" class="hotkey-capture" id="app-hotkey-hide" placeholder="Click to bind…" readonly title="Hotkey to completely hide or show the overlay" /></div>
+        <div class="setting-row"><label>Quit App</label><input type="text" class="hotkey-capture" id="app-hotkey-quit" placeholder="Click to bind…" readonly title="Hotkey to close the application entirely" /></div>
+        <button class="btn-primary" id="app-save-hotkeys" style="width:100%;margin-top:4px;" title="Save all four app hotkey bindings">Save App Hotkeys</button>
       </div>
 
       <div class="automation-card">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Saved Filters</div>
-        <div class="setting-row"><label>Remember Server</label><input type="checkbox" id="filter-remember-server" /></div>
+        <div class="setting-row"><label>Remember Server</label><input type="checkbox" id="filter-remember-server" title="Automatically restore your last-selected server when the app starts" /></div>
       </div>
 
       <div class="automation-card">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Profile Target</div>
-        <div class="setting-row"><label>Name</label><input type="text" id="automation-profile-name" maxlength="80" /></div>
-        <div class="setting-row"><label>Description</label><input type="text" id="automation-profile-description" maxlength="160" /></div>
-        <div class="setting-row"><label>Window Title</label><input type="text" id="automation-target-title" maxlength="120" /></div>
+        <div class="setting-row"><label>Name</label><input type="text" id="automation-profile-name" maxlength="80" title="A short label to identify this automation profile" /></div>
+        <div class="setting-row"><label>Description</label><input type="text" id="automation-profile-description" maxlength="160" title="Optional notes about what this profile does" /></div>
+        <div class="setting-row"><label>Window Title</label><input type="text" id="automation-target-title" maxlength="120" title="Title of the game window the automation should attach to" /></div>
         <div class="setting-row"><label>Match Mode</label>
-          <select id="automation-target-match-mode">
+          <select id="automation-target-match-mode" title="How the helper finds the target window">
             <option value="process-first">Process First</option>
             <option value="title-only">Title Only</option>
             <option value="manual-window-select">Manual Window</option>
           </select>
         </div>
-        <div class="setting-row"><label>Process Name</label><input type="text" id="automation-target-process-name" maxlength="80" /></div>
-        <div class="setting-row"><label>Foreground Required</label><input type="checkbox" id="automation-target-require-foreground" /></div>
-        <div class="setting-row"><label>Poll ms</label><input type="number" id="automation-target-poll-interval" min="50" value="500" /></div>
+        <div class="setting-row"><label>Process Name</label><input type="text" id="automation-target-process-name" maxlength="80" title="Executable name of the target process (e.g. Conquer.exe)" /></div>
+        <div class="setting-row"><label>Foreground Required</label><input type="checkbox" id="automation-target-require-foreground" title="Only run automation while the game window is in the foreground" /></div>
+        <div class="setting-row"><label>Poll ms</label><input type="number" id="automation-target-poll-interval" min="50" value="500" title="How often (in ms) the helper checks whether the target window is still active" /></div>
         <button class="btn-primary" id="automation-save-profile-target" style="width:100%;margin-top:4px;">Save Profile Target</button>
       </div>
 
       <div class="automation-card">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Overlay Preferences</div>
-        <div class="setting-row"><label>HUD</label><input type="checkbox" id="automation-hud-enabled" /></div>
-        <div class="setting-row"><label>Timers</label><input type="checkbox" id="automation-buffs-enabled" /></div>
-        <div class="setting-row"><label>Compact HUD</label><input type="checkbox" id="automation-compact-hud" /></div>
-        <div class="setting-row"><label>Active Timers Only</label><input type="checkbox" id="automation-show-active-buffs-only" /></div>
-        <div class="setting-row"><label>Hide HUD Unfocused</label><input type="checkbox" id="automation-hide-hud-unfocused" /></div>
-        <div class="setting-row"><label>Hide Timers Unfocused</label><input type="checkbox" id="automation-hide-buffs-unfocused" /></div>
+        <div class="setting-row"><label>HUD</label><input type="checkbox" id="automation-hud-enabled" title="Show the live status HUD overlay on screen" /></div>
+        <div class="setting-row"><label>Timers</label><input type="checkbox" id="automation-buffs-enabled" title="Show the buff timer overlay on screen" /></div>
+        <div class="setting-row"><label>Compact HUD</label><input type="checkbox" id="automation-compact-hud" title="Use a narrower, smaller version of the HUD" /></div>
+        <div class="setting-row"><label>Active Timers Only</label><input type="checkbox" id="automation-show-active-buffs-only" title="Hide timers that are not currently counting down" /></div>
+        <div class="setting-row"><label>Hide HUD Unfocused</label><input type="checkbox" id="automation-hide-hud-unfocused" title="Automatically hide the HUD when the game window loses focus" /></div>
+        <div class="setting-row"><label>Hide Timers Unfocused</label><input type="checkbox" id="automation-hide-buffs-unfocused" title="Automatically hide the timer overlay when the game window loses focus" /></div>
         <div class="setting-row"><label>Anchor</label>
-          <select id="automation-anchor-mode">
+          <select id="automation-anchor-mode" title="Whether overlay positions are relative to the game window or the screen">
             <option value="game-relative">Game Relative</option>
             <option value="screen-relative">Screen Relative</option>
           </select>
@@ -1397,16 +1477,16 @@
       <div class="automation-card">
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Clicker Hotkeys</div>
         <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">Click a field then press any key or combination.</div>
-        <div class="setting-row"><label>Master</label><input type="text" class="hotkey-capture" id="automation-hotkey-master" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Emergency Stop</label><input type="text" class="hotkey-capture" id="automation-hotkey-emergency" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Left Click</label><input type="text" class="hotkey-capture" id="automation-hotkey-left" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Right Click</label><input type="text" class="hotkey-capture" id="automation-hotkey-right" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>F-Key</label><input type="text" class="hotkey-capture" id="automation-hotkey-f7" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Shift Hold</label><input type="text" class="hotkey-capture" id="automation-hotkey-shift" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Ctrl Hold</label><input type="text" class="hotkey-capture" id="automation-hotkey-ctrl" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Timer 1</label><input type="text" class="hotkey-capture" id="automation-hotkey-stigma" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Timer 2</label><input type="text" class="hotkey-capture" id="automation-hotkey-shield" placeholder="Click to bind…" readonly /></div>
-        <div class="setting-row"><label>Timer 3</label><input type="text" class="hotkey-capture" id="automation-hotkey-invisibility" placeholder="Click to bind…" readonly /></div>
+        <div class="setting-row"><label>Master</label><input type="text" class="hotkey-capture" id="automation-hotkey-master" placeholder="Click to bind…" readonly title="Hotkey to toggle the master automation switch on or off" /></div>
+        <div class="setting-row"><label>Emergency Stop</label><input type="text" class="hotkey-capture" id="automation-hotkey-emergency" placeholder="Click to bind…" readonly title="Hotkey to instantly stop all automation" /></div>
+        <div class="setting-row"><label>Left Click</label><input type="text" class="hotkey-capture" id="automation-hotkey-left" placeholder="Click to bind…" readonly title="Hotkey to toggle the left-click automation" /></div>
+        <div class="setting-row"><label>Right Click</label><input type="text" class="hotkey-capture" id="automation-hotkey-right" placeholder="Click to bind…" readonly title="Hotkey to toggle the right-click automation" /></div>
+        <div class="setting-row"><label>F-Key</label><input type="text" class="hotkey-capture" id="automation-hotkey-f7" placeholder="Click to bind…" readonly title="Hotkey to toggle the F-key press automation" /></div>
+        <div class="setting-row"><label>Shift Hold</label><input type="text" class="hotkey-capture" id="automation-hotkey-shift" placeholder="Click to bind…" readonly title="Hotkey to toggle holding Shift during automation" /></div>
+        <div class="setting-row"><label>Ctrl Hold</label><input type="text" class="hotkey-capture" id="automation-hotkey-ctrl" placeholder="Click to bind…" readonly title="Hotkey to toggle holding Ctrl during automation" /></div>
+        <div class="setting-row"><label>Timer 1</label><input type="text" class="hotkey-capture" id="automation-hotkey-stigma" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 1" /></div>
+        <div class="setting-row"><label>Timer 2</label><input type="text" class="hotkey-capture" id="automation-hotkey-shield" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 2" /></div>
+        <div class="setting-row"><label>Timer 3</label><input type="text" class="hotkey-capture" id="automation-hotkey-invisibility" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 3" /></div>
         <button class="btn-primary" id="automation-save-hotkeys" style="width:100%;margin-top:8px;">Save Clicker Hotkeys</button>
       </div>
 
@@ -1443,6 +1523,12 @@
           <select id="automation-buff-invisibility-mode"><option value="countdown">Down</option><option value="countup">Up</option></select>
         </div>
         <button class="btn-primary" id="automation-save-buffs" style="width:100%;margin-top:8px;">Save Timers</button>
+      </div>
+
+      <div class="automation-card" style="text-align:center;">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Support</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">Here you can buy me a coffee :)</div>
+        <button class="btn-primary" id="btn-support-me" title="Open PayPal donation page in browser" style="width:100%;background:linear-gradient(135deg,rgba(26,60,20,0.8),rgba(14,44,10,0.8));border-color:var(--green);">&#9829; Coffee is good</button>
       </div>
 
     </div>
