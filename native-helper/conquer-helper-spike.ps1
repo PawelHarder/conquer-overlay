@@ -1006,25 +1006,14 @@ function Invoke-RuntimeTick {
     }
 
     if ($script:Config.target.requireForegroundForInput -and -not $targetStatus.isForeground) {
-        if (Test-RuntimeHasRequestedInput -and Test-RuntimeShouldAttemptFocus -Now $now) {
-            $focusResult = Focus-TargetWindow
-            $targetStatus = $focusResult.target
-            Write-Message -Type 'target-status' -Payload $targetStatus
-            Write-LogMessage -Message "Runtime attempted to focus target while active input was waiting." -Details @{ target = $targetStatus; activated = [bool]$focusResult.activated }
-        }
-
-        if ($targetStatus.isForeground) {
-            Set-RuntimeBlockReason -Reason '' -TargetStatus $targetStatus
-        } else {
         $shouldRelease = $runtime.safeStopReleasesModifiers -and (
             $script:Config.runtimeApplied.shiftDown -or
             $script:Config.runtimeApplied.ctrlDown -or
             [string]$script:Config.runtimeApplied.lastRuntimeBlockReason -ne 'target-background'
         )
         Set-RuntimeBlockReason -Reason 'target-background' -TargetStatus $targetStatus
-            if ($shouldRelease) { Release-Modifiers }
-            return
-        }
+        if ($shouldRelease) { Release-Modifiers }
+        return
     }
 
     Set-RuntimeBlockReason -Reason '' -TargetStatus $targetStatus

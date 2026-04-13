@@ -714,22 +714,13 @@ fn runtime_tick(cfg: &mut Config, ctx: &platform::X11Context, out: &Out) {
 
     // Target must be foreground.
     if cfg.target.require_foreground_for_input && !fg {
-        let has_input = rt.left_clicker_enabled || rt.right_clicker_enabled || rt.f7_enabled || rt.shift_held_enabled || rt.ctrl_held_enabled;
-        if has_input && now.duration_since(cfg.applied.last_focus_attempt) >= Duration::from_millis(350) {
-            cfg.applied.last_focus_attempt = now;
-            if let Some(wid) = find_target_window(ctx, &cfg.target) {
-                ctx.activate_window(wid);
-            }
+        set_block_reason(cfg, ctx, "target-background", &status, out);
+        if rt.safe_stop_releases_modifiers {
+            ctx.release_modifiers();
+            cfg.applied.shift_down = false;
+            cfg.applied.ctrl_down = false;
         }
-        if !fg {
-            set_block_reason(cfg, ctx, "target-background", &status, out);
-            if rt.safe_stop_releases_modifiers {
-                ctx.release_modifiers();
-                cfg.applied.shift_down = false;
-                cfg.applied.ctrl_down = false;
-            }
-            return;
-        }
+        return;
     }
 
     set_block_reason(cfg, ctx, "", &status, out);
