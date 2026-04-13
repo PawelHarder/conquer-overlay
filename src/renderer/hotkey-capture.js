@@ -46,6 +46,9 @@ export function setupHotkeyCapture(inputEl, mode) {
         keyPart = 'Escape';
       } else if (e.key === 'Mouse3' || e.code === 'Mouse3') {
         keyPart = 'MouseMiddle';
+      } else if (/^Numpad\d$/.test(e.code)) {
+        // Distinguish numpad digits from number-row digits regardless of NumLock state
+        keyPart = e.code;
       } else if (e.key.length === 1) {
         keyPart = e.key.toUpperCase();
       } else {

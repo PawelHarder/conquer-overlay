@@ -804,17 +804,109 @@ function Resolve-VirtualKey {
     param([string]$Binding)
 
     switch ($Binding) {
+        # Mouse
         'MouseMiddle' { return 0x04 }
-        'Escape' { return 0x1B }
-        'F1' { return 0x70 }
-        'F2' { return 0x71 }
-        'F3' { return 0x72 }
-        'F7' { return 0x76 }
-        'Semicolon' { return 0xBA }
-        'Quote' { return 0xDE }
-        'Comma' { return 0xBC }
-        'BracketLeft' { return 0xDB }
+        'Mouse4'      { return 0x05 }
+        'Mouse5'      { return 0x06 }
+
+        # Control keys
+        'Backspace'   { return 0x08 }
+        'Tab'         { return 0x09 }
+        'Enter'       { return 0x0D }
+        'Escape'      { return 0x1B }
+        'Space'       { return 0x20 }
+
+        # Navigation
+        'PageUp'      { return 0x21 }
+        'PageDown'    { return 0x22 }
+        'End'         { return 0x23 }
+        'Home'        { return 0x24 }
+        'ArrowLeft'   { return 0x25 }
+        'ArrowUp'     { return 0x26 }
+        'ArrowRight'  { return 0x27 }
+        'ArrowDown'   { return 0x28 }
+        'Insert'      { return 0x2D }
+        'Delete'      { return 0x2E }
+
+        # Number row 0–9
+        '0' { return 0x30 }
+        '1' { return 0x31 }
+        '2' { return 0x32 }
+        '3' { return 0x33 }
+        '4' { return 0x34 }
+        '5' { return 0x35 }
+        '6' { return 0x36 }
+        '7' { return 0x37 }
+        '8' { return 0x38 }
+        '9' { return 0x39 }
+
+        # Letters A–Z
+        'A' { return 0x41 }
+        'B' { return 0x42 }
+        'C' { return 0x43 }
+        'D' { return 0x44 }
+        'E' { return 0x45 }
+        'F' { return 0x46 }
+        'G' { return 0x47 }
+        'H' { return 0x48 }
+        'I' { return 0x49 }
+        'J' { return 0x4A }
+        'K' { return 0x4B }
+        'L' { return 0x4C }
+        'M' { return 0x4D }
+        'N' { return 0x4E }
+        'O' { return 0x4F }
+        'P' { return 0x50 }
+        'Q' { return 0x51 }
+        'R' { return 0x52 }
+        'S' { return 0x53 }
+        'T' { return 0x54 }
+        'U' { return 0x55 }
+        'V' { return 0x56 }
+        'W' { return 0x57 }
+        'X' { return 0x58 }
+        'Y' { return 0x59 }
+        'Z' { return 0x5A }
+
+        # Numpad 0–9
+        'Numpad0' { return 0x60 }
+        'Numpad1' { return 0x61 }
+        'Numpad2' { return 0x62 }
+        'Numpad3' { return 0x63 }
+        'Numpad4' { return 0x64 }
+        'Numpad5' { return 0x65 }
+        'Numpad6' { return 0x66 }
+        'Numpad7' { return 0x67 }
+        'Numpad8' { return 0x68 }
+        'Numpad9' { return 0x69 }
+
+        # Function keys F1–F12
+        'F1'  { return 0x70 }
+        'F2'  { return 0x71 }
+        'F3'  { return 0x72 }
+        'F4'  { return 0x73 }
+        'F5'  { return 0x74 }
+        'F6'  { return 0x75 }
+        'F7'  { return 0x76 }
+        'F8'  { return 0x77 }
+        'F9'  { return 0x78 }
+        'F10' { return 0x79 }
+        'F11' { return 0x7A }
+        'F12' { return 0x7B }
+
+        # Punctuation / symbols
+        'Semicolon'    { return 0xBA }
+        'Equal'        { return 0xBB }
+        'Comma'        { return 0xBC }
+        'Minus'        { return 0xBD }
+        'Period'       { return 0xBE }
+        'Slash'        { return 0xBF }
+        'Backquote'    { return 0xC0 }
+        'BracketLeft'  { return 0xDB }
+        'Backslash'    { return 0xDC }
         'BracketRight' { return 0xDD }
+        'Quote'        { return 0xDE }
+
         default { return $null }
     }
 }

@@ -32,33 +32,6 @@ function setInteractiveMode(nextInteractive) {
   broadcastAltState(isInteractive);
 }
 
-async function handoffAutomationFocus(state) {
-  const automationService = getAutomationService();
-  if (!automationService || !state?.activeProfile?.gameTarget?.requireForegroundForInput) {
-    return state;
-  }
-
-  const runtimeState = state.runtimeState || {};
-  const hasActiveAutomation = Boolean(
-    runtimeState.masterEnabled && (
-      runtimeState.leftClickerEnabled ||
-      runtimeState.rightClickerEnabled ||
-      runtimeState.f7Enabled ||
-      runtimeState.shiftHeldEnabled ||
-      runtimeState.ctrlHeldEnabled
-    )
-  );
-
-  if (!hasActiveAutomation) {
-    return state;
-  }
-
-  if (!isInteractive) {
-    await automationService.focusTarget();
-  }
-  return automationService.getState();
-}
-
 // ── Window actions ────────────────────────────────────────────────────────────
 
 function toggleCollapsed() {
@@ -125,7 +98,6 @@ module.exports = {
   getIsCollapsed,
   getIsInteractive,
   setInteractiveMode,
-  handoffAutomationFocus,
   toggleCollapsed,
   toggleVisibility,
   buildAppShortcutHandlers,

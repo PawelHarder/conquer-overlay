@@ -16,7 +16,6 @@ const {
 const { getAutomationService } = require('./automation-setup');
 const {
   setInteractiveMode,
-  handoffAutomationFocus,
   toggleCollapsed,
   toggleVisibility,
   reregisterAppShortcuts,
@@ -134,15 +133,13 @@ function setupIPC() {
   ipcMain.handle('automation:set-master-enabled', async (_, enabled) => {
     const svc = getAutomationService();
     if (!svc) return null;
-    const state = await svc.setMasterEnabled(enabled);
-    return handoffAutomationFocus(state);
+    return svc.setMasterEnabled(enabled);
   });
 
   ipcMain.handle('automation:set-runtime-toggle', async (_, { toggleId, enabled } = {}) => {
     const svc = getAutomationService();
     if (!svc) return null;
-    const state = await svc.setRuntimeToggle(toggleId, enabled);
-    return handoffAutomationFocus(state);
+    return svc.setRuntimeToggle(toggleId, enabled);
   });
 
   ipcMain.handle('automation:test-action', async (_, { action, payload } = {}) => {

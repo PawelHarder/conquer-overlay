@@ -2,6 +2,7 @@ import { dom } from './dom-refs.js';
 import { applyTheme, applyUiScale, applyFontPairing, applyOpacity, applyTextOpacity } from './themes.js';
 import { setupHotkeyCapture } from './hotkey-capture.js';
 import { setStatus } from './utils.js';
+import { openKeyboardPicker } from './keyboard-picker.js';
 
 export function setup() {
   dom.themeSelect.addEventListener('change',       () => applyTheme(dom.themeSelect.value));
@@ -33,6 +34,25 @@ export function setup() {
   setupHotkeyCapture(dom.appHotkeyCollapse, 'app');
   setupHotkeyCapture(dom.appHotkeyHide,    'app');
   setupHotkeyCapture(dom.appHotkeyQuit,    'app');
+
+  // Clear buttons — clicker hotkeys only
+  document.querySelectorAll('.hotkey-clear-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (input) input.value = '';
+    });
+  });
+
+  // Picker buttons — all hotkeys
+  document.querySelectorAll('.hotkey-picker-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      const mode = input.id.startsWith('automation-') ? 'automation' : 'app';
+      const result = await openKeyboardPicker(mode);
+      if (result !== null) input.value = result;
+    });
+  });
 
   dom.appSaveHotkeys?.addEventListener('click', async () => {
     const hotkeys = {
