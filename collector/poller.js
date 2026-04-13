@@ -2,7 +2,7 @@
 
 const axios = require('axios');
 const cron = require('node-cron');
-const { insertSnapshot, pruneOldData } = require('./db');
+const { insertSnapshot, pruneOldData, buildHourlyAverages } = require('./db');
 
 const BASE_URL = 'https://conqueronline.net';
 const ITEMS_PATH = '/Community/GetItems';
@@ -23,6 +23,7 @@ async function runPoll() {
     const items = await fetchAllListings();
     const snapshotAt = Math.floor(Date.now() / 1000);
     const inserted = insertSnapshot(items, snapshotAt);
+    buildHourlyAverages(snapshotAt);   // must run before prune
     const pruned = pruneOldData();
     console.log(`[Poller] Inserted ${inserted} listings, pruned ${pruned} old rows`);
   } catch (err) {

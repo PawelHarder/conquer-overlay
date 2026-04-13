@@ -88,18 +88,18 @@ function setupIPC() {
 
   // ── Price history DB queries ──────────────────────────────────────────────
 
-  ipcMain.handle('query-price-history', (_, filters) => {
+  ipcMain.handle('query-price-history', async (_, filters) => {
     try {
-      return queryPriceHistoryData(filters ?? {});
+      return await queryPriceHistoryData(filters ?? {});
     } catch (error) {
       sendDebugMessage(`History query failed: ${error.message}`);
       return [];
     }
   });
 
-  ipcMain.handle('query-watch-baseline', (_, filters) => {
+  ipcMain.handle('query-watch-baseline', async (_, filters) => {
     try {
-      return queryWatchBaselineData(filters ?? {});
+      return await queryWatchBaselineData(filters ?? {});
     } catch (error) {
       sendDebugMessage(`Baseline query failed: ${error.message}`);
       return null;

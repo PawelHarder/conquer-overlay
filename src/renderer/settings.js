@@ -65,6 +65,6 @@ export function setup() {
   // Support button
   const supportBtn = document.getElementById('btn-support-me');
   supportBtn?.addEventListener('click', () => {
-    window.electronAPI?.openExternalUrl?.('https://paypal.me/conqueroverlay');
+    window.electronAPI?.openExternalUrl?.('https://paypal.me/PKHarder');
   });
 }
