@@ -5,6 +5,7 @@ import { getListings } from '../api.js';
 import { sortItems, renderListings, updatePriceSummary, setupSortableHeader } from './listings.js';
 import { clearPinnedMinimap } from './minimap.js';
 import { getRawPrice } from './price-inputs.js';
+import { t } from './i18n.js';
 
 export async function doSearch() {
   const query     = dom.searchInput.value.trim();
@@ -16,11 +17,11 @@ export async function doSearch() {
   const sockets   = dom.searchSockets.value !== '' ? parseInt(dom.searchSockets.value, 10) : undefined;
   const maxPrice  = getRawPrice(dom.searchMaxPrice) ?? undefined;
 
-  if (!query && !major && !minor) { setStatus('Enter search terms', 'warn'); return; }
+  if (!query && !major && !minor) { setStatus(t('msg.enter_search', 'Enter search terms'), 'warn'); return; }
 
   dom.searchResults.innerHTML = '<div class="placeholder-text"><span class="spinner"></span></div>';
   dom.priceLow.textContent = dom.priceAvg.textContent = dom.priceHigh.textContent = '—';
-  setStatus('Searching…', 'warn');
+  setStatus(t('status.searching', 'Searching…'), 'warn');
 
   try {
     const data = await getListings({ search: query, majorType: major, minorType: minor,
@@ -30,10 +31,10 @@ export async function doSearch() {
     dom.searchCount.textContent = `(${items.length})`;
     renderListings(state.searchItems, dom.searchResults);
     updatePriceSummary(items);
-    setStatus(`${items.length} results`, 'ok');
+    setStatus(t('msg.results', '{count} results').replace('{count}', items.length), 'ok');
   } catch (err) {
     dom.searchResults.innerHTML = `<div class="placeholder-text" style="color:var(--red)">Search failed: ${escHtml(err.message)}</div>`;
-    setStatus('Search error', 'error');
+    setStatus(t('status.search_error', 'Search error'), 'error');
   }
 }
 
@@ -52,7 +53,7 @@ export function setup() {
 
   dom.searchClearListings.addEventListener('click', () => {
     state.searchItems = [];
-    dom.searchResults.innerHTML = '<div class="placeholder-text">Enter search terms above</div>';
+    dom.searchResults.innerHTML = `<div class="placeholder-text">${escHtml(t('placeholder.search_results', 'Enter search terms above'))}</div>`;
     dom.searchCount.textContent = '';
     dom.priceLow.textContent = dom.priceAvg.textContent = dom.priceHigh.textContent = '—';
     clearPinnedMinimap();
@@ -63,12 +64,12 @@ export function setup() {
     dom.searchQuality.value = dom.searchPlus.value = dom.searchSockets.value = '';
     dom.searchMaxPrice.value = dom.searchMaxPrice.dataset.raw = '';
     if (dom.searchPlusAny) { dom.searchPlusAny.checked = false; dom.searchPlus.disabled = false; }
-    dom.searchResults.innerHTML = '<div class="placeholder-text">Enter search terms above</div>';
+    dom.searchResults.innerHTML = `<div class="placeholder-text">${escHtml(t('placeholder.search_results', 'Enter search terms above'))}</div>`;
     dom.searchCount.textContent = '';
     dom.priceLow.textContent = dom.priceAvg.textContent = dom.priceHigh.textContent = '—';
     state.searchItems = [];
     clearPinnedMinimap();
-    setStatus('Ready', 'ok');
+    setStatus(t('status.ready', 'Ready'), 'ok');
   });
 
   dom.searchPlusAny?.addEventListener('change', () => {

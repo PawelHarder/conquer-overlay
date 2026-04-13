@@ -1,11 +1,12 @@
 import { state } from './state.js';
 import { dom } from './dom-refs.js';
 import { escHtml } from './utils.js';
+import { t } from './i18n.js';
 import { getFilters, loadMarketSnapshot, WEAPON_1H_CLASSES, WEAPON_2H_CLASSES } from '../api.js';
 
 const QUALITY_ORDER = ['Fixed', 'Normal', 'Refined', 'Unique', 'Elite', 'Super', 'Legendary'];
 
-export function populateMinorForMajor(majorSelect, minorSelect, placeholder) {
+export function populateMinorForMajor(majorSelect, minorSelect, placeholderKey) {
   const major = majorSelect.value;
   const minors = (state.filterMeta?.minorByMajor?.[major]) ?? state.filterMeta?.minorCategories ?? [];
   const prev = minorSelect.value;
@@ -17,26 +18,26 @@ export function populateMinorForMajor(majorSelect, minorSelect, placeholder) {
       ]
     : [];
   minorSelect.innerHTML = [
-    `<option value="">${escHtml(placeholder)}</option>`,
+    `<option value="" data-i18n="${escHtml(placeholderKey)}">${escHtml(t(placeholderKey, placeholderKey))}</option>`,
     ...groups,
     ...minors.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`),
   ].join('');
   if (prev && [...minorSelect.options].some(o => o.value === prev)) minorSelect.value = prev;
 }
 
-export function populateSelect(select, values, placeholder) {
+export function populateSelect(select, values, placeholderKey) {
   const previous = select.value;
   select.innerHTML = [
-    `<option value="">${escHtml(placeholder)}</option>`,
+    `<option value="" data-i18n="${escHtml(placeholderKey)}">${escHtml(t(placeholderKey, placeholderKey))}</option>`,
     ...values.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`),
   ].join('');
   if (previous && values.includes(previous)) select.value = previous;
 }
 
-export function populatePlusSelect(select, placeholder) {
+export function populatePlusSelect(select, placeholderKey) {
   const previous = select.value;
   select.innerHTML = [
-    `<option value="">${escHtml(placeholder)}</option>`,
+    `<option value="" data-i18n="${escHtml(placeholderKey)}">${escHtml(t(placeholderKey, placeholderKey))}</option>`,
     ...Array.from({ length: 10 }, (_, i) => `<option value="${i}">+${i}</option>`),
   ].join('');
   if (previous) select.value = previous;
@@ -59,22 +60,22 @@ export async function ensureFilterMeta() {
     const filters = await getFilters();
     state.filterMeta = filters;
     const qualities = sortQualities(filters.qualities ?? []);
-    populateSelect(dom.searchMajor,    filters.majorCategories ?? [], 'All Categories');
-    populateSelect(dom.searchMinor,    filters.minorCategories ?? [], 'All Minor Classes');
-    populateSelect(dom.searchQuality,  qualities,                     'All Qualities');
-    populateSelect(dom.historyMajor,   filters.majorCategories ?? [], 'Any Category');
-    populateSelect(dom.historyMinor,   filters.minorCategories ?? [], 'Any Minor Class');
-    populateSelect(dom.historyQuality, qualities,                     'Any Quality');
-    populateSelect(dom.watchMajor,     filters.majorCategories ?? [], 'Any Category');
-    populateSelect(dom.watchMinor,     filters.minorCategories ?? [], 'Any Minor Class');
-    populateSelect(dom.watchQuality,   qualities,                     'Any Quality');
-    populatePlusSelect(dom.searchPlus,  'Any Plus');
-    populatePlusSelect(dom.historyPlus, 'Any Plus');
-    populatePlusSelect(dom.watchPlus,   'Any Plus');
+    populateSelect(dom.searchMajor,    filters.majorCategories ?? [], 'option.all_categories');
+    populateSelect(dom.searchMinor,    filters.minorCategories ?? [], 'option.all_minor');
+    populateSelect(dom.searchQuality,  qualities,                     'option.all_qualities');
+    populateSelect(dom.historyMajor,   filters.majorCategories ?? [], 'option.any_category');
+    populateSelect(dom.historyMinor,   filters.minorCategories ?? [], 'option.any_minor');
+    populateSelect(dom.historyQuality, qualities,                     'option.any_quality');
+    populateSelect(dom.watchMajor,     filters.majorCategories ?? [], 'option.any_category');
+    populateSelect(dom.watchMinor,     filters.minorCategories ?? [], 'option.any_minor');
+    populateSelect(dom.watchQuality,   qualities,                     'option.any_quality');
+    populatePlusSelect(dom.searchPlus,  'option.any_plus');
+    populatePlusSelect(dom.historyPlus, 'option.any_plus');
+    populatePlusSelect(dom.watchPlus,   'option.any_plus');
     // Wire cascaded minor dropdowns
-    dom.searchMajor.addEventListener('change',  () => populateMinorForMajor(dom.searchMajor,  dom.searchMinor,  'All Minor Classes'));
-    dom.historyMajor.addEventListener('change', () => populateMinorForMajor(dom.historyMajor, dom.historyMinor, 'Any Minor Class'));
-    dom.watchMajor.addEventListener('change',   () => populateMinorForMajor(dom.watchMajor,   dom.watchMinor,   'Any Minor Class'));
+    dom.searchMajor.addEventListener('change',  () => populateMinorForMajor(dom.searchMajor,  dom.searchMinor,  'option.all_minor'));
+    dom.historyMajor.addEventListener('change', () => populateMinorForMajor(dom.historyMajor, dom.historyMinor, 'option.any_minor'));
+    dom.watchMajor.addEventListener('change',   () => populateMinorForMajor(dom.watchMajor,   dom.watchMinor,   'option.any_minor'));
     state.filterMetaLoaded = true;
   } catch (_) { /* keep fallback markup */ }
 }

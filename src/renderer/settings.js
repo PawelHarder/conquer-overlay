@@ -4,6 +4,7 @@ import { setupHotkeyCapture } from './hotkey-capture.js';
 import { setStatus } from './utils.js';
 import { openKeyboardPicker } from './keyboard-picker.js';
 import { toggleFeature, getFeatureEnabled } from './feature-toggles.js';
+import { setLocale, getCurrentLocale } from './i18n.js';
 
 export function setup() {
   dom.themeSelect.addEventListener('change',       () => applyTheme(dom.themeSelect.value));
@@ -27,6 +28,12 @@ export function setup() {
   dom.featureWatch?.addEventListener('change',       e => toggleFeature('watch',        e.target.checked));
   dom.featureHistory?.addEventListener('change',     e => toggleFeature('history',      e.target.checked));
   dom.featureAutoclicker?.addEventListener('change', e => toggleFeature('autoclicker',  e.target.checked));
+
+  // Locale selector
+  if (dom.localeSelect) {
+    dom.localeSelect.value = getCurrentLocale();
+    dom.localeSelect.addEventListener('change', () => setLocale(dom.localeSelect.value));
+  }
 
   // Debug card toggle inside settings tab
   const debugToggleBtn = document.getElementById('debug-toggle');

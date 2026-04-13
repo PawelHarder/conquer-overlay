@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { dom } from './dom-refs.js';
 import { setStatus, formatPrice } from './utils.js';
 import { drawChart } from './chart.js';
+import { t } from './i18n.js';
 
 // ── Chart tooltip hit-test ─────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ function showChartTooltip(pt, e) {
 
 export async function loadHistory() {
   if (!window.electronAPI?.queryPriceHistory) {
-    dom.chartPlaceholder.textContent = 'DB query unavailable — start the poller first';
+    dom.chartPlaceholder.textContent = t('placeholder.chart_unavailable', 'DB query unavailable — start the poller first');
     dom.chartPlaceholder.style.display = 'flex';
     return;
   }
@@ -48,15 +49,15 @@ export async function loadHistory() {
     days:       state.historyDays,
   };
 
-  dom.chartPlaceholder.textContent = 'Loading…';
+  dom.chartPlaceholder.textContent = t('status.loading', 'Loading…');
   dom.chartPlaceholder.style.display = 'flex';
 
   try {
     const points = await window.electronAPI.queryPriceHistory(filters);
     if (!points.length) {
-      dom.chartPlaceholder.textContent = 'No history data for the current filters';
+      dom.chartPlaceholder.textContent = t('msg.no_history', 'No history data for the current filters');
       dom.histLow.textContent = dom.histMed.textContent = dom.histHigh.textContent = '—';
-      setStatus('No history rows matched', 'warn');
+      setStatus(t('msg.no_history_rows', 'No history rows matched'), 'warn');
       return;
     }
     dom.chartPlaceholder.style.display = 'none';
@@ -70,10 +71,10 @@ export async function loadHistory() {
     dom.histLow.textContent  = formatPrice(lows[0] ?? null);
     dom.histMed.textContent  = formatPrice(avgs[Math.floor(avgs.length / 2)] ?? null);
     dom.histHigh.textContent = formatPrice(highs[highs.length - 1] ?? null);
-    setStatus(`History loaded (${points.length} buckets)`, 'ok');
+    setStatus(t('msg.history_loaded', 'History loaded ({count} buckets)').replace('{count}', points.length), 'ok');
   } catch (err) {
-    dom.chartPlaceholder.textContent = `Failed to load history: ${err.message}`;
-    setStatus('History error', 'error');
+    dom.chartPlaceholder.textContent = t('msg.history_error_detail', 'Failed to load history: {err}').replace('{err}', err.message);
+    setStatus(t('status.history_error', 'History error'), 'error');
   }
 }
 
@@ -94,7 +95,7 @@ export function setup() {
     dom.historyItemName.value = dom.historyMajor.value = dom.historyMinor.value =
     dom.historyQuality.value = dom.historyPlus.value = dom.historySockets.value = '';
     dom.histLow.textContent = dom.histMed.textContent = dom.histHigh.textContent = '—';
-    dom.chartPlaceholder.textContent = 'Set filters and click Load';
+    dom.chartPlaceholder.textContent = t('placeholder.chart', 'Set filters and click Load');
     dom.chartPlaceholder.style.display = 'flex';
     dom.chartCanvas.getContext('2d').clearRect(0, 0, dom.chartCanvas.width, dom.chartCanvas.height);
   });

@@ -1,14 +1,14 @@
-      <div class="section-label">Features</div>
-      <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">Disable features you don't use. The tab will be hidden from the bar.</div>
-      <div class="setting-row"><label>Search</label><input type="checkbox" checked disabled title="Core feature — cannot be disabled" /></div>
-      <div class="setting-row"><label>Watch</label><input type="checkbox" id="feature-watch" checked title="Toggle the Watch tab" /></div>
-      <div class="setting-row"><label>History</label><input type="checkbox" id="feature-history" checked title="Toggle the History tab" /></div>
-      <div class="setting-row"><label>Clicker</label><input type="checkbox" id="feature-autoclicker" checked title="Toggle the Clicker tab" /></div>
+      <div class="section-label" data-i18n="section.features">Features</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;" data-i18n="features.desc">Disable features you don't use. The tab will be hidden from the bar.</div>
+      <div class="setting-row"><label data-i18n="feature.search">Search</label><input type="checkbox" checked disabled title="Core feature — cannot be disabled" /></div>
+      <div class="setting-row"><label data-i18n="feature.watch">Watch</label><input type="checkbox" id="feature-watch" checked title="Toggle the Watch tab" /></div>
+      <div class="setting-row"><label data-i18n="feature.history">History</label><input type="checkbox" id="feature-history" checked title="Toggle the History tab" /></div>
+      <div class="setting-row"><label data-i18n="feature.clicker">Clicker</label><input type="checkbox" id="feature-autoclicker" checked title="Toggle the Clicker tab" /></div>
 
-      <div class="section-label">Display</div>
+      <div class="section-label" data-i18n="section.display">Display</div>
 
       <div class="setting-row">
-        <label>Theme</label>
+        <label data-i18n="label.theme">Theme</label>
         <select id="theme-select" title="Change the colour scheme of the overlay">
           <option value="original-dark" selected>Original Dark</option>
           <option value="midnight-blue">Midnight Blue</option>
@@ -20,7 +20,7 @@
       </div>
 
       <div class="setting-row">
-        <label>UI Scale</label>
+        <label data-i18n="label.ui_scale">UI Scale</label>
         <select id="ui-scale-select" title="Scale the entire overlay UI up or down">
           <option value="0.9">Small — 90%</option>
           <option value="1" selected>Normal — 100%</option>
@@ -30,7 +30,7 @@
       </div>
 
       <div class="setting-row">
-        <label>Font Pairing</label>
+        <label data-i18n="label.font_pairing">Font Pairing</label>
         <select id="font-pairing-select" title="Change the headline and body font combination">
           <option value="classic" style="font-family:'Segoe UI',sans-serif" selected>Classic — Segoe UI / Palatino</option>
           <option value="scholar" style="font-family:Cambria,serif">Scholar — Cambria / Garamond</option>
@@ -43,128 +43,139 @@
       </div>
 
       <div class="setting-row">
-        <label>Overlay Transparency</label>
+        <label data-i18n="label.language">Language</label>
+        <select id="locale-select" title="Change the interface language">
+          <option value="en" data-i18n="lang.en">English</option>
+          <option value="pl" data-i18n="lang.pl">Polski</option>
+          <option value="de" data-i18n="lang.de">Deutsch</option>
+          <option value="es" data-i18n="lang.es">Español</option>
+          <option value="fr" data-i18n="lang.fr">Français</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label data-i18n="label.overlay_opacity">Overlay Transparency</label>
         <input type="range" id="opacity-slider" min="10" max="100" value="100" title="Adjust overall background transparency of the overlay" />
         <input type="number" id="opacity-input" min="10" max="100" value="100" style="width:56px" title="Exact transparency value (10–100%)" />
         <span style="font-size:10px;color:var(--text-dim)">%</span>
       </div>
 
       <div class="setting-row">
-        <label>Text Transparency</label>
+        <label data-i18n="label.text_opacity">Text Transparency</label>
         <input type="range" id="text-opacity-slider" min="0" max="100" value="100" title="Adjust the transparency of text and icons inside the overlay" />
         <input type="number" id="text-opacity-input" min="0" max="100" value="100" style="width:56px" title="Exact text transparency value (0–100%)" />
         <span style="font-size:10px;color:var(--text-dim)">%</span>
       </div>
 
-      <div class="section-label">Window</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">
+      <div class="section-label" data-i18n="section.window">Window</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;" data-i18n="window.position_hint">
         Position is saved automatically when you move the window.
       </div>
-      <button class="btn-primary" id="reset-position-btn" style="width:100%" title="Move the overlay back to the top-left corner of the screen">Reset Window Position</button>
+      <button class="btn-primary" id="reset-position-btn" data-i18n="btn.reset_position" style="width:100%" title="Move the overlay back to the top-left corner of the screen">Reset Window Position</button>
 
       <div class="automation-card" style="margin-top:14px;">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">App Hotkeys</div>
-        <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">Click a field then press any key or combination.</div>
-        <div class="setting-row"><label>Interact Toggle</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-interact" placeholder="Click to bind…" readonly title="Hotkey to switch between click-through and interactive mode" /><button class="hotkey-picker-btn" data-target="app-hotkey-interact" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Collapse</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-collapse" placeholder="Click to bind…" readonly title="Hotkey to collapse or expand the overlay" /><button class="hotkey-picker-btn" data-target="app-hotkey-collapse" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Hide</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-hide" placeholder="Click to bind…" readonly title="Hotkey to completely hide or show the overlay" /><button class="hotkey-picker-btn" data-target="app-hotkey-hide" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Quit App</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-quit" placeholder="Click to bind…" readonly title="Hotkey to close the application entirely" /><button class="hotkey-picker-btn" data-target="app-hotkey-quit" title="Pick from keyboard">⌨</button></div></div>
-        <button class="btn-primary" id="app-save-hotkeys" style="width:100%;margin-top:4px;" title="Save all four app hotkey bindings">Save App Hotkeys</button>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.app_hotkeys">App Hotkeys</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;" data-i18n="hotkeys.hint">Click a field then press any key or combination.</div>
+        <div class="setting-row"><label data-i18n="hotkey.interact">Interact Toggle</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-interact" placeholder="Click to bind…" readonly title="Hotkey to switch between click-through and interactive mode" /><button class="hotkey-picker-btn" data-target="app-hotkey-interact" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.collapse">Collapse</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-collapse" placeholder="Click to bind…" readonly title="Hotkey to collapse or expand the overlay" /><button class="hotkey-picker-btn" data-target="app-hotkey-collapse" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.hide">Hide</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-hide" placeholder="Click to bind…" readonly title="Hotkey to completely hide or show the overlay" /><button class="hotkey-picker-btn" data-target="app-hotkey-hide" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.quit">Quit App</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="app-hotkey-quit" placeholder="Click to bind…" readonly title="Hotkey to close the application entirely" /><button class="hotkey-picker-btn" data-target="app-hotkey-quit" title="Pick from keyboard">⌨</button></div></div>
+        <button class="btn-primary" id="app-save-hotkeys" data-i18n="btn.save_app_hotkeys" style="width:100%;margin-top:4px;" title="Save all four app hotkey bindings">Save App Hotkeys</button>
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Saved Filters</div>
-        <div class="setting-row"><label>Remember Server</label><input type="checkbox" id="filter-remember-server" title="Automatically restore your last-selected server when the app starts" /></div>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.saved_filters">Saved Filters</div>
+        <div class="setting-row"><label data-i18n="label.remember_server">Remember Server</label><input type="checkbox" id="filter-remember-server" title="Automatically restore your last-selected server when the app starts" /></div>
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Profile Target</div>
-        <div class="setting-row"><label>Name</label><input type="text" id="automation-profile-name" maxlength="80" title="A short label to identify this automation profile" /></div>
-        <div class="setting-row"><label>Description</label><input type="text" id="automation-profile-description" maxlength="160" title="Optional notes about what this profile does" /></div>
-        <div class="setting-row"><label>Window Title</label><input type="text" id="automation-target-title" maxlength="120" title="Title of the game window the automation should attach to" /></div>
-        <div class="setting-row"><label>Match Mode</label>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.profile_target">Profile Target</div>
+        <div class="setting-row"><label data-i18n="label.name">Name</label><input type="text" id="automation-profile-name" maxlength="80" title="A short label to identify this automation profile" /></div>
+        <div class="setting-row"><label data-i18n="label.description">Description</label><input type="text" id="automation-profile-description" maxlength="160" title="Optional notes about what this profile does" /></div>
+        <div class="setting-row"><label data-i18n="label.window_title">Window Title</label><input type="text" id="automation-target-title" maxlength="120" title="Title of the game window the automation should attach to" /></div>
+        <div class="setting-row"><label data-i18n="label.match_mode">Match Mode</label>
           <select id="automation-target-match-mode" title="How the helper finds the target window">
-            <option value="process-first">Process First</option>
-            <option value="title-only">Title Only</option>
-            <option value="manual-window-select">Manual Window</option>
+            <option value="process-first" data-i18n="option.process_first">Process First</option>
+            <option value="title-only" data-i18n="option.title_only">Title Only</option>
+            <option value="manual-window-select" data-i18n="option.manual_window">Manual Window</option>
           </select>
         </div>
-        <div class="setting-row"><label>Process Name</label><input type="text" id="automation-target-process-name" maxlength="80" title="Executable name of the target process (e.g. Conquer.exe)" /></div>
-        <div class="setting-row"><label>Foreground Required</label><input type="checkbox" id="automation-target-require-foreground" title="Only run automation while the game window is in the foreground" /></div>
-        <div class="setting-row"><label>Poll ms</label><input type="number" id="automation-target-poll-interval" min="50" value="500" title="How often (in ms) the helper checks whether the target window is still active" /></div>
-        <button class="btn-primary" id="automation-save-profile-target" style="width:100%;margin-top:4px;">Save Profile Target</button>
+        <div class="setting-row"><label data-i18n="label.process_name">Process Name</label><input type="text" id="automation-target-process-name" maxlength="80" title="Executable name of the target process (e.g. Conquer.exe)" /></div>
+        <div class="setting-row"><label data-i18n="label.foreground">Foreground Required</label><input type="checkbox" id="automation-target-require-foreground" title="Only run automation while the game window is in the foreground" /></div>
+        <div class="setting-row"><label data-i18n="label.poll_ms">Poll ms</label><input type="number" id="automation-target-poll-interval" min="50" value="500" title="How often (in ms) the helper checks whether the target window is still active" /></div>
+        <button class="btn-primary" id="automation-save-profile-target" data-i18n="btn.save_profile_target" style="width:100%;margin-top:4px;">Save Profile Target</button>
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Overlay Preferences</div>
-        <div class="setting-row"><label>HUD</label><input type="checkbox" id="automation-hud-enabled" title="Show the live status HUD overlay on screen" /></div>
-        <div class="setting-row"><label>Timers</label><input type="checkbox" id="automation-buffs-enabled" title="Show the buff timer overlay on screen" /></div>
-        <div class="setting-row"><label>Compact HUD</label><input type="checkbox" id="automation-compact-hud" title="Use a narrower, smaller version of the HUD" /></div>
-        <div class="setting-row"><label>Active Timers Only</label><input type="checkbox" id="automation-show-active-buffs-only" title="Hide timers that are not currently counting down" /></div>
-        <div class="setting-row"><label>Hide HUD Unfocused</label><input type="checkbox" id="automation-hide-hud-unfocused" title="Automatically hide the HUD when the game window loses focus" /></div>
-        <div class="setting-row"><label>Hide Timers Unfocused</label><input type="checkbox" id="automation-hide-buffs-unfocused" title="Automatically hide the timer overlay when the game window loses focus" /></div>
-        <div class="setting-row"><label>Anchor</label>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.overlay_prefs">Overlay Preferences</div>
+        <div class="setting-row"><label data-i18n="label.hud">HUD</label><input type="checkbox" id="automation-hud-enabled" title="Show the live status HUD overlay on screen" /></div>
+        <div class="setting-row"><label data-i18n="label.overlay_timers">Timers</label><input type="checkbox" id="automation-buffs-enabled" title="Show the buff timer overlay on screen" /></div>
+        <div class="setting-row"><label data-i18n="label.compact_hud">Compact HUD</label><input type="checkbox" id="automation-compact-hud" title="Use a narrower, smaller version of the HUD" /></div>
+        <div class="setting-row"><label data-i18n="label.active_timers_only">Active Timers Only</label><input type="checkbox" id="automation-show-active-buffs-only" title="Hide timers that are not currently counting down" /></div>
+        <div class="setting-row"><label data-i18n="label.hide_hud_unfocused">Hide HUD Unfocused</label><input type="checkbox" id="automation-hide-hud-unfocused" title="Automatically hide the HUD when the game window loses focus" /></div>
+        <div class="setting-row"><label data-i18n="label.hide_timers_unfocused">Hide Timers Unfocused</label><input type="checkbox" id="automation-hide-buffs-unfocused" title="Automatically hide the timer overlay when the game window loses focus" /></div>
+        <div class="setting-row"><label data-i18n="label.anchor">Anchor</label>
           <select id="automation-anchor-mode" title="Whether overlay positions are relative to the game window or the screen">
-            <option value="game-relative">Game Relative</option>
-            <option value="screen-relative">Screen Relative</option>
+            <option value="game-relative" data-i18n="option.game_relative">Game Relative</option>
+            <option value="screen-relative" data-i18n="option.screen_relative">Screen Relative</option>
           </select>
         </div>
-        <button class="btn-primary" id="automation-save-overlays" style="width:100%;margin-top:4px;">Save Overlay Preferences</button>
+        <button class="btn-primary" id="automation-save-overlays" data-i18n="btn.save_overlays" style="width:100%;margin-top:4px;">Save Overlay Preferences</button>
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Clicker Hotkeys</div>
-        <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">Click a field then press any key or combination.</div>
-        <div class="setting-row"><label>Master</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-master" placeholder="Click to bind…" readonly title="Hotkey to toggle the master automation switch on or off" /><button class="hotkey-clear-btn" data-target="automation-hotkey-master" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-master" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Emergency Stop</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-emergency" placeholder="Click to bind…" readonly title="Hotkey to instantly stop all automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-emergency" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-emergency" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Left Click</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-left" placeholder="Click to bind…" readonly title="Hotkey to toggle the left-click automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-left" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-left" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Right Click</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-right" placeholder="Click to bind…" readonly title="Hotkey to toggle the right-click automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-right" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-right" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>F-Key</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-f7" placeholder="Click to bind…" readonly title="Hotkey to toggle the F-key press automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-f7" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-f7" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Shift Hold</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-shift" placeholder="Click to bind…" readonly title="Hotkey to toggle holding Shift during automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-shift" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-shift" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Ctrl Hold</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-ctrl" placeholder="Click to bind…" readonly title="Hotkey to toggle holding Ctrl during automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-ctrl" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-ctrl" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Timer 1</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-stigma" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 1" /><button class="hotkey-clear-btn" data-target="automation-hotkey-stigma" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-stigma" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Timer 2</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-shield" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 2" /><button class="hotkey-clear-btn" data-target="automation-hotkey-shield" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-shield" title="Pick from keyboard">⌨</button></div></div>
-        <div class="setting-row"><label>Timer 3</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-invisibility" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 3" /><button class="hotkey-clear-btn" data-target="automation-hotkey-invisibility" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-invisibility" title="Pick from keyboard">⌨</button></div></div>
-        <button class="btn-primary" id="automation-save-hotkeys" style="width:100%;margin-top:8px;">Save Clicker Hotkeys</button>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.clicker_hotkeys">Clicker Hotkeys</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px;" data-i18n="hotkeys.hint">Click a field then press any key or combination.</div>
+        <div class="setting-row"><label data-i18n="hotkey.master">Master</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-master" placeholder="Click to bind…" readonly title="Hotkey to toggle the master automation switch on or off" /><button class="hotkey-clear-btn" data-target="automation-hotkey-master" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-master" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.emergency">Emergency Stop</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-emergency" placeholder="Click to bind…" readonly title="Hotkey to instantly stop all automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-emergency" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-emergency" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.left">Left Click</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-left" placeholder="Click to bind…" readonly title="Hotkey to toggle the left-click automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-left" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-left" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.right">Right Click</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-right" placeholder="Click to bind…" readonly title="Hotkey to toggle the right-click automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-right" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-right" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.fkey_toggle">F-Key</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-f7" placeholder="Click to bind…" readonly title="Hotkey to toggle the F-key press automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-f7" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-f7" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.shift">Shift Hold</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-shift" placeholder="Click to bind…" readonly title="Hotkey to toggle holding Shift during automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-shift" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-shift" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.ctrl">Ctrl Hold</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-ctrl" placeholder="Click to bind…" readonly title="Hotkey to toggle holding Ctrl during automation" /><button class="hotkey-clear-btn" data-target="automation-hotkey-ctrl" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-ctrl" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.timer1">Timer 1</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-stigma" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 1" /><button class="hotkey-clear-btn" data-target="automation-hotkey-stigma" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-stigma" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.timer2">Timer 2</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-shield" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 2" /><button class="hotkey-clear-btn" data-target="automation-hotkey-shield" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-shield" title="Pick from keyboard">⌨</button></div></div>
+        <div class="setting-row"><label data-i18n="hotkey.timer3">Timer 3</label><div class="hotkey-field-wrap"><input type="text" class="hotkey-capture" id="automation-hotkey-invisibility" placeholder="Click to bind…" readonly title="Hotkey to manually trigger or reset Timer 3" /><button class="hotkey-clear-btn" data-target="automation-hotkey-invisibility" title="Remove binding">×</button><button class="hotkey-picker-btn" data-target="automation-hotkey-invisibility" title="Pick from keyboard">⌨</button></div></div>
+        <button class="btn-primary" id="automation-save-hotkeys" data-i18n="btn.save_clicker_hotkeys" style="width:100%;margin-top:8px;">Save Clicker Hotkeys</button>
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Timers</div>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.timers">Timers</div>
         <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:5px;margin-bottom:8px;font-size:9px;color:var(--text-dim);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px;">
-          <div>Timer</div><div>Label</div><div>Dur (s)</div><div>Warn 1</div><div>Warn 2</div><div>Overlay</div><div>Mode</div>
+          <div data-i18n="label.timer_col">Timer</div><div data-i18n="label.timer_label">Label</div><div data-i18n="label.timer_dur">Dur (s)</div><div data-i18n="label.timer_warn1">Warn 1</div><div data-i18n="label.timer_warn2">Warn 2</div><div data-i18n="label.timer_overlay">Overlay</div><div data-i18n="label.timer_mode">Mode</div>
         </div>
         <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:5px;align-items:center;margin-bottom:8px;">
-          <div style="font-size:11px;">Timer 1</div>
+          <div style="font-size:11px;" data-i18n="timer.timer1">Timer 1</div>
           <input type="text" id="automation-buff-stigma-label" maxlength="24" />
           <input type="number" id="automation-buff-stigma-duration" min="1" />
           <input type="number" id="automation-buff-stigma-warn1" min="1" />
           <input type="number" id="automation-buff-stigma-warn2" min="1" />
           <input type="checkbox" id="automation-buff-stigma-visible" />
-          <select id="automation-buff-stigma-mode"><option value="countdown">Down</option><option value="countup">Up</option></select>
+          <select id="automation-buff-stigma-mode"><option value="countdown" data-i18n="option.countdown">Down</option><option value="countup" data-i18n="option.countup">Up</option></select>
         </div>
         <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:5px;align-items:center;margin-bottom:8px;">
-          <div style="font-size:11px;">Timer 2</div>
+          <div style="font-size:11px;" data-i18n="timer.timer2">Timer 2</div>
           <input type="text" id="automation-buff-shield-label" maxlength="24" />
           <input type="number" id="automation-buff-shield-duration" min="1" />
           <input type="number" id="automation-buff-shield-warn1" min="1" />
           <input type="number" id="automation-buff-shield-warn2" min="1" />
           <input type="checkbox" id="automation-buff-shield-visible" />
-          <select id="automation-buff-shield-mode"><option value="countdown">Down</option><option value="countup">Up</option></select>
+          <select id="automation-buff-shield-mode"><option value="countdown" data-i18n="option.countdown">Down</option><option value="countup" data-i18n="option.countup">Up</option></select>
         </div>
         <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:5px;align-items:center;">
-          <div style="font-size:11px;">Timer 3</div>
+          <div style="font-size:11px;" data-i18n="timer.timer3">Timer 3</div>
           <input type="text" id="automation-buff-invisibility-label" maxlength="24" />
           <input type="number" id="automation-buff-invisibility-duration" min="1" />
           <input type="number" id="automation-buff-invisibility-warn1" min="1" />
           <input type="number" id="automation-buff-invisibility-warn2" min="1" />
           <input type="checkbox" id="automation-buff-invisibility-visible" />
-          <select id="automation-buff-invisibility-mode"><option value="countdown">Down</option><option value="countup">Up</option></select>
+          <select id="automation-buff-invisibility-mode"><option value="countdown" data-i18n="option.countdown">Down</option><option value="countup" data-i18n="option.countup">Up</option></select>
         </div>
-        <button class="btn-primary" id="automation-save-buffs" style="width:100%;margin-top:8px;">Save Timers</button>
+        <button class="btn-primary" id="automation-save-buffs" data-i18n="btn.save_timers" style="width:100%;margin-top:8px;">Save Timers</button>
       </div>
 
       <div class="automation-card" style="text-align:center;">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Support</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">Here you can buy me a coffee :)</div>
-        <button class="btn-primary" id="btn-support-me" title="Open PayPal donation page in browser" style="width:100%;background:linear-gradient(135deg,rgba(26,60,20,0.8),rgba(14,44,10,0.8));border-color:var(--green);">&#9829; Coffee is good</button>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.support">Support</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;" data-i18n="support.hint">Here you can buy me a coffee :)</div>
+        <button class="btn-primary" id="btn-support-me" data-i18n="support.btn" title="Open PayPal donation page in browser" style="width:100%;background:linear-gradient(135deg,rgba(26,60,20,0.8),rgba(14,44,10,0.8));border-color:var(--green);">&#9829; Coffee is good</button>
       </div>

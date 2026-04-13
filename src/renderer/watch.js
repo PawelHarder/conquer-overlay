@@ -3,6 +3,7 @@ import { dom } from './dom-refs.js';
 import { setStatus, escHtml, formatPrice, playAlertSound } from './utils.js';
 import { watchForDeal } from '../api.js';
 import { sortItems, renderListings, setupSortableHeader } from './listings.js';
+import { t } from './i18n.js';
 import { clearPinnedMinimap } from './minimap.js';
 import { getRawPrice, priceFormatter } from './price-inputs.js';
 
@@ -33,15 +34,15 @@ export function showDealAlert(listing) {
 export function startWatch() {
   const filters  = buildWatchFilters();
   const interval = parseInt(dom.watchInterval.value);
-  if (!filters.search && !filters.majorType && !filters.minorType) { setStatus('Enter an item name or category to watch', 'warn'); return; }
-  if (!filters.maxPrice) { setStatus('Enter a max price', 'warn'); return; }
+  if (!filters.search && !filters.majorType && !filters.minorType) { setStatus(t('msg.enter_item_or_category', 'Enter an item name or category to watch'), 'warn'); return; }
+  if (!filters.maxPrice) { setStatus(t('msg.enter_max_price', 'Enter a max price'), 'warn'); return; }
   if (state.watchCancel) { state.watchCancel.cancel(); state.watchCancel = null; state.watchReset = null; }
   dom.watchDot.classList.add('active');
   dom.watchText.innerHTML = `Watching <strong>${escHtml(filters.search || filters.majorType || filters.minorType)}</strong> ≤ <strong>${formatPrice(filters.maxPrice)}</strong>`;
-  dom.watchStartBtn.textContent = '■ Stop';
+  dom.watchStartBtn.textContent = t('btn.stop', '■ Stop');
   dom.watchStartBtn.style.background = 'var(--red-dim)';
   dom.watchStartBtn.style.borderColor = 'var(--red)';
-  setStatus('Watching…', 'ok');
+  setStatus(t('status.watching', 'Watching…'), 'ok');
   const handle = watchForDeal(filters, matches => {
     matches.forEach(match => { showDealAlert(match); state.watchItems.unshift(match); });
     renderListings(sortItems(state.watchItems, state.watchSort.key, state.watchSort.dir), dom.watchMatches);
@@ -58,10 +59,10 @@ export function startWatch() {
 export function stopWatch() {
   if (state.watchCancel) { state.watchCancel.cancel(); state.watchCancel = null; state.watchReset = null; }
   dom.watchDot.classList.remove('active');
-  dom.watchText.textContent = 'No active watch';
-  dom.watchStartBtn.textContent = '▶ Watch';
+  dom.watchText.textContent = t('watch.status.inactive', 'No active watch');
+  dom.watchStartBtn.textContent = t('btn.watch', '▶ Watch');
   dom.watchStartBtn.style.background = dom.watchStartBtn.style.borderColor = '';
-  setStatus('Watch stopped', 'ok');
+  setStatus(t('status.watch_stopped', 'Watch stopped'), 'ok');
 }
 
 export function setup() {
@@ -75,11 +76,11 @@ export function setup() {
   );
 
   dom.watchUseHistoryBtn.addEventListener('click', async () => {
-    if (!window.electronAPI?.queryWatchBaseline) { setStatus('DB unavailable — start the poller', 'warn'); return; }
+    if (!window.electronAPI?.queryWatchBaseline) { setStatus(t('msg.db_unavailable', 'DB unavailable — start the poller'), 'warn'); return; }
     const basis = dom.watchPriceBasis.value;
     const pct   = parseFloat(dom.watchPricePct.value);
-    if (!basis) { setStatus('Select a basis (lowest / average)', 'warn'); return; }
-    if (isNaN(pct) || pct < 0) { setStatus('Enter a valid percentage', 'warn'); return; }
+    if (!basis) { setStatus(t('msg.select_basis', 'Select a basis (lowest / average)'), 'warn'); return; }
+    if (isNaN(pct) || pct < 0) { setStatus(t('msg.enter_valid_pct', 'Enter a valid percentage'), 'warn'); return; }
     try {
       const baseline = await window.electronAPI.queryWatchBaseline({
         itemName:   dom.watchItem.value.trim(),
@@ -90,14 +91,14 @@ export function setup() {
         sockets:    dom.watchSockets.value !== '' ? parseInt(dom.watchSockets.value) : null,
         server:     state.server,
       });
-      if (!baseline) { setStatus('No history data for these filters', 'warn'); return; }
+      if (!baseline) { setStatus(t('msg.no_history_filters', 'No history data for these filters'), 'warn'); return; }
       const base = basis === 'lowest' ? baseline.lowest : baseline.avg;
-      if (base == null) { setStatus('Baseline unavailable', 'warn'); return; }
+      if (base == null) { setStatus(t('msg.baseline_unavailable', 'Baseline unavailable'), 'warn'); return; }
       const maxPrice = Math.floor(base * (1 - pct / 100));
       dom.watchPrice.dataset.raw = String(maxPrice);
       dom.watchPrice.value = priceFormatter.format(maxPrice);
-      setStatus(`Price set: ${formatPrice(maxPrice)} gold`, 'ok');
-    } catch (_) { setStatus('Baseline query failed', 'error'); }
+      setStatus(t('msg.price_set', 'Price set: {price} gold').replace('{price}', formatPrice(maxPrice)), 'ok');
+    } catch (_) { setStatus(t('msg.baseline_failed', 'Baseline query failed'), 'error'); }
   });
 
   dom.watchStartBtn.addEventListener('click', () => { if (state.watchCancel) stopWatch(); else startWatch(); });
@@ -105,7 +106,7 @@ export function setup() {
   dom.watchClearListings.addEventListener('click', () => {
     state.watchItems = [];
     state.watchReset?.();
-    dom.watchMatches.innerHTML = '<div class="placeholder-text">Matches will appear here</div>';
+    dom.watchMatches.innerHTML = `<div class="placeholder-text">${escHtml(t('placeholder.watch_matches', 'Matches will appear here'))}</div>`;
     clearPinnedMinimap();
     window.electronAPI?.dismissWatchOverlay?.();
   });
@@ -118,7 +119,7 @@ export function setup() {
     dom.watchPriceBasis.value = dom.watchPricePct.value = '';
     if (dom.watchPlusAny) { dom.watchPlusAny.checked = false; dom.watchPlus.disabled = false; }
     state.watchItems = [];
-    dom.watchMatches.innerHTML = '<div class="placeholder-text">Matches will appear here</div>';
+    dom.watchMatches.innerHTML = `<div class="placeholder-text">${escHtml(t('placeholder.watch_matches', 'Matches will appear here'))}</div>`;
     clearPinnedMinimap();
     window.electronAPI?.dismissWatchOverlay?.();
   });

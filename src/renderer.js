@@ -17,6 +17,7 @@ import * as autoclicker from './renderer/autoclicker.js';
 import * as settings    from './renderer/settings.js';
 import * as plusCalc    from './renderer/plus-calculator.js';
 import { applyFeatureToggles } from './renderer/feature-toggles.js';
+import { initI18n } from './renderer/i18n.js';
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,9 @@ buildDomRefs();
 
 // 3. Apply feature toggles before any tab switching logic runs
 applyFeatureToggles();
+
+// 3.5. Initialize i18n — reads stored locale, applies translations to DOM
+initI18n();
 
 // 4. Wire cross-module dependency: ui.switchTab triggers loadHistory
 registerLoadHistory(loadHistory);

@@ -1,24 +1,24 @@
       <div class="search-form">
         <div class="field-group">
-          <div class="field-label">Item Name / Keyword</div>
+          <div class="field-label" data-i18n="label.item_name_keyword">Item Name / Keyword</div>
           <div class="search-row">
             <div class="autocomplete-wrap" style="flex:1">
-              <input type="text" id="search-input" placeholder="Search market..." autocomplete="off" title="Type item name or keyword to search the market" />
+              <input type="text" id="search-input" placeholder="Search market..." data-i18n-placeholder="placeholder.search" autocomplete="off" title="Type item name or keyword to search the market" />
               <div class="autocomplete-list" id="search-autocomplete"></div>
             </div>
-            <button class="btn-primary" id="search-btn" title="Fetch current market listings matching your filters">Search</button>
+            <button class="btn-primary" id="search-btn" data-i18n="btn.search" title="Fetch current market listings matching your filters">Search</button>
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div class="field-group">
-            <div class="field-label">Category</div>
+            <div class="field-label" data-i18n="label.category">Category</div>
             <select id="search-major" title="Filter by item category">
               <option value="">All Categories</option>
             </select>
           </div>
           <div class="field-group">
-            <div class="field-label">Minor Class</div>
+            <div class="field-label" data-i18n="label.minor_class">Minor Class</div>
             <select id="search-minor" title="Filter by item sub-type within the selected category">
               <option value="">All Minor Classes</option>
             </select>
@@ -27,13 +27,13 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
           <div class="field-group">
-            <div class="field-label">Quality</div>
+            <div class="field-label" data-i18n="label.quality">Quality</div>
             <select id="search-quality" title="Filter by item quality tier">
               <option value="">All Qualities</option>
             </select>
           </div>
           <div class="field-group">
-            <div class="field-label">+Level</div>
+            <div class="field-label" data-i18n="label.plus_level">+Level</div>
             <div style="display:flex;gap:6px;align-items:center;">
               <select id="search-plus" title="Filter by enchantment plus level" style="flex:1;">
                 <option value="">Any Plus</option>
@@ -44,38 +44,38 @@
             </div>
           </div>
           <div class="field-group">
-            <div class="field-label">Sockets</div>
+            <div class="field-label" data-i18n="label.sockets">Sockets</div>
             <select id="search-sockets" title="Filter by number of sockets on the item">
-              <option value="">Any Sockets</option>
-              <option value="0">No sockets</option>
-              <option value="1">1 socket</option>
-              <option value="2">2 sockets</option>
+              <option value="" data-i18n="option.any_sockets">Any Sockets</option>
+              <option value="0" data-i18n="option.no_sockets">No sockets</option>
+              <option value="1" data-i18n="option.1_socket">1 socket</option>
+              <option value="2" data-i18n="option.2_sockets">2 sockets</option>
             </select>
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr;gap:8px;">
           <div class="field-group">
-            <div class="field-label">Max Price</div>
+            <div class="field-label" data-i18n="label.max_price">Max Price</div>
             <div class="price-input-wrap">
-              <input type="text" id="search-maxprice" placeholder="No limit" autocomplete="off" title="Only show listings at or below this price (in gold)" />
+              <input type="text" id="search-maxprice" placeholder="No limit" data-i18n-placeholder="placeholder.no_limit" autocomplete="off" title="Only show listings at or below this price (in gold)" />
               <span class="currency-hint">gold</span>
             </div>
           </div>
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:6px;">
-          <button class="btn-clear" id="search-clear-listings" title="Clear current results without resetting filters">Clear Listings</button>
-          <button class="btn-clear" id="search-clear" title="Clear all filters and results">Clear</button>
+          <button class="btn-clear" id="search-clear-listings" data-i18n="btn.clear_listings" title="Clear current results without resetting filters">Clear Listings</button>
+          <button class="btn-clear" id="search-clear" data-i18n="btn.clear" title="Clear all filters and results">Clear</button>
         </div>
       </div>
 
       <div class="section-label calc-toggle" id="calc-toggle" title="+1 Item Decomposition Calculator">
-        ⚡ Plus Calculator <span id="calc-arrow" style="font-size:9px;color:var(--gold-dim);margin-left:-4px;">▶</span>
+        <span data-i18n="section.plus_calc">⚡ Plus Calculator</span> <span id="calc-arrow" style="font-size:9px;color:var(--gold-dim);margin-left:-4px;">▶</span>
       </div>
       <div id="calc-panel" style="display:none;">
         <div class="field-group" style="margin-bottom:8px;">
-          <div class="field-label">How many +1 items do you have?</div>
+          <div class="field-label" data-i18n="placeholder.calc_hint">How many +1 items do you have?</div>
           <input type="number" id="calc-count" min="1" placeholder="e.g. 6562" style="width:100%;" autocomplete="off" title="Enter the total count of +1 items to see what higher-plus items you can craft" />
         </div>
         <div id="calc-output">
@@ -83,18 +83,18 @@
         </div>
       </div>
 
-      <div class="section-label">Live Prices</div>
+      <div class="section-label" data-i18n="section.live_prices">Live Prices</div>
       <div class="price-row">
         <div class="price-card low">
-          <div class="label">Lowest</div>
+          <div class="label" data-i18n="price.lowest">Lowest</div>
           <div class="value" id="price-low">—</div>
         </div>
         <div class="price-card">
-          <div class="label">Average</div>
+          <div class="label" data-i18n="price.average">Average</div>
           <div class="value" id="price-avg">—</div>
         </div>
         <div class="price-card high">
-          <div class="label">Highest</div>
+          <div class="label" data-i18n="price.highest">Highest</div>
           <div class="value" id="price-high">—</div>
         </div>
       </div>
@@ -102,14 +102,14 @@
       <div class="section-label">Results <span id="search-count" style="color:var(--text-dim)"></span></div>
       <div class="listings-wrap">
       <div class="listings-header">
-        <span data-sort="AttributeName">Item</span>
-        <span data-sort="SellerName">Seller</span>
-        <span data-sort="QualityName" style="text-align:center">Quality</span>
-        <span data-sort="pos" style="text-align:center">Loc</span>
-        <span data-sort="Price" style="text-align:right" class="sort-asc">Price</span>
+        <span data-sort="AttributeName" data-i18n="sort.item">Item</span>
+        <span data-sort="SellerName" data-i18n="sort.seller">Seller</span>
+        <span data-sort="QualityName" style="text-align:center" data-i18n="sort.quality">Quality</span>
+        <span data-sort="pos" style="text-align:center" data-i18n="sort.loc">Loc</span>
+        <span data-sort="Price" style="text-align:right" class="sort-asc" data-i18n="sort.price">Price</span>
       </div>
       <div id="search-results">
-        <div class="placeholder-text">Enter search terms above</div>
+        <div class="placeholder-text" data-i18n="placeholder.search_results">Enter search terms above</div>
       </div>
       </div>
 

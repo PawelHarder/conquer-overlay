@@ -14,24 +14,24 @@
   <div id="titlebar">
     <span class="title-icon">⚔</span>
     <span class="title-text">Conquer Overlay</span>
-    <span class="title-hint" id="alt-hint">ALT toggles interact</span>
+    <span class="title-hint" id="alt-hint" data-i18n="alt.hint">ALT toggles interact</span>
     <button class="title-btn" id="btn-collapse" title="Collapse (Alt+C)">▲</button>
     <button class="title-btn close" id="btn-close" title="Hide (Alt+H)">✕</button>
   </div>
 
   <div id="tabs">
-    <div class="tab active" data-tab="search">Search</div>
-    <div class="tab" data-tab="watch">Watch</div>
-    <div class="tab" data-tab="history">History</div>
-    <div class="tab" data-tab="autoclicker">Clicker</div>
+    <div class="tab active" data-tab="search" data-i18n="tab.search">Search</div>
+    <div class="tab" data-tab="watch" data-i18n="tab.watch">Watch</div>
+    <div class="tab" data-tab="history" data-i18n="tab.history">History</div>
+    <div class="tab" data-tab="autoclicker" data-i18n="tab.clicker">Clicker</div>
     <button id="btn-settings-tab">⚙</button>
   </div>
 
   <div id="server-bar">
-    <span class="server-label">Server</span>
-    <button class="server-btn active" data-server="">Any</button>
-    <button class="server-btn" data-server="Classic_EU">Classic EU</button>
-    <button class="server-btn" data-server="Classic_US">Classic US</button>
+    <span class="server-label" data-i18n="server.label">Server</span>
+    <button class="server-btn active" data-server="" data-i18n="server.any">Any</button>
+    <button class="server-btn" data-server="Classic_EU" data-i18n="server.classic_eu">Classic EU</button>
+    <button class="server-btn" data-server="Classic_US" data-i18n="server.classic_us">Classic US</button>
   </div>
 
   <div id="content">
@@ -43,20 +43,20 @@
   </div>
 
   <div id="statusbar">
-    <span class="status-text" id="status-text">Ready</span>
+    <span class="status-text" id="status-text" data-i18n="status.ready">Ready</span>
     <div class="status-dot" id="status-dot"></div>
   </div>
 
 </div>
 
 <div id="minimap-popup" class="minimap-popup side-right">
-  <div class="minimap-title">Location Preview</div>
+  <div class="minimap-title" data-i18n="minimap.title">Location Preview</div>
   <canvas id="minimap-popup-canvas" width="318" height="318"></canvas>
-  <div class="minimap-caption" id="minimap-popup-caption">Hover a listing to preview its position</div>
+  <div class="minimap-caption" id="minimap-popup-caption" data-i18n="minimap.caption">Hover a listing to preview its position</div>
 </div>
 
 <div id="alert-popup">
-  <div class="alert-title">⚑ DEAL FOUND</div>
+  <div class="alert-title" data-i18n="alert.title">⚑ DEAL FOUND</div>
   <div class="alert-item" id="alert-item-name">—</div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
     <span style="font-size:11px;color:var(--text-dim)" id="alert-seller">—</span>
@@ -64,12 +64,12 @@
   </div>
 </div>
 
-<div id="alt-indicator">ALT: click-through</div>
+<div id="alt-indicator" data-i18n="alt.indicator">ALT: click-through</div>
 
 <div id="chart-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;align-items:center;justify-content:center;">
   <div style="background:var(--bg-panel);border:1px solid var(--gold-dim);border-radius:var(--radius);padding:12px;width:90%;max-width:380px;position:relative;">
     <button id="chart-modal-close" style="position:absolute;top:8px;right:8px;background:none;border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;cursor:pointer;padding:2px 6px;transition:all 0.12s;">✕</button>
-    <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Price Trend — Expanded</div>
+    <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="chart.modal.title">Price Trend — Expanded</div>
     <div id="chart-modal-wrap" style="width:100%;height:300px;position:relative;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
       <canvas id="chart-modal-canvas"></canvas>
     </div>

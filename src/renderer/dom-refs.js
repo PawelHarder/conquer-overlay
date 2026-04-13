@@ -179,5 +179,6 @@ export function buildDomRefs() {
     featureWatch:                    $('feature-watch'),
     featureHistory:                  $('feature-history'),
     featureAutoclicker:              $('feature-autoclicker'),
+    localeSelect:                    $('locale-select'),
   });
 }

@@ -1,49 +1,49 @@
       <div class="automation-card">
         <div class="setting-row" style="margin-bottom:10px;">
-          <label>Profile</label>
+          <label data-i18n="label.profile">Profile</label>
           <select id="automation-profile-select" title="Select which automation profile to configure and run"></select>
         </div>
         <div class="automation-actions compact" style="margin-top:0;margin-bottom:10px;grid-template-columns:repeat(2,1fr);">
-          <button class="btn-primary" id="automation-profile-new" title="Create a new empty automation profile">New Profile</button>
-          <button class="btn-clear" id="automation-profile-delete" title="Permanently delete the currently selected profile">Delete Profile</button>
+          <button class="btn-primary" id="automation-profile-new" data-i18n="btn.new_profile" title="Create a new empty automation profile">New Profile</button>
+          <button class="btn-clear" id="automation-profile-delete" data-i18n="btn.delete_profile" title="Permanently delete the currently selected profile">Delete Profile</button>
         </div>
         <div class="automation-actions compact" style="margin-top:0;margin-bottom:10px;grid-template-columns:repeat(2,1fr);">
-          <button class="btn-primary" id="automation-profile-export" title="Save the selected profile to a file for backup or sharing">Export Profile</button>
-          <button class="btn-clear" id="automation-profile-import" title="Load a previously exported profile from a file">Import Profile</button>
+          <button class="btn-primary" id="automation-profile-export" data-i18n="btn.export_profile" title="Save the selected profile to a file for backup or sharing">Export Profile</button>
+          <button class="btn-clear" id="automation-profile-import" data-i18n="btn.import_profile" title="Load a previously exported profile from a file">Import Profile</button>
         </div>
         <div class="automation-status-line">
-          <span>Helper</span>
-          <span class="automation-status-value" id="automation-helper-status">Loading…</span>
+          <span data-i18n="label.helper">Helper</span>
+          <span class="automation-status-value" id="automation-helper-status" data-i18n="status.helper_loading">Loading…</span>
         </div>
         <div class="automation-status-line">
-          <span>Target</span>
-          <span class="automation-status-value" id="automation-target-status">Unknown</span>
+          <span data-i18n="label.target">Target</span>
+          <span class="automation-status-value" id="automation-target-status" data-i18n="status.target_unknown">Unknown</span>
         </div>
         <div class="automation-status-line">
-          <span>Master</span>
-          <span class="automation-status-value" id="automation-master-status">OFF</span>
+          <span data-i18n="label.master">Master</span>
+          <span class="automation-status-value" id="automation-master-status" data-i18n="status.master_off">OFF</span>
         </div>
         <div class="automation-actions">
-          <button class="btn-primary" id="automation-refresh-btn" title="Reload the current automation state from the background service">Refresh</button>
-          <button class="btn-primary" id="automation-restart-btn" title="Restart the native automation helper process">Restart Helper</button>
-          <button class="btn-primary" id="automation-master-btn" title="Enable or disable all automation clicks at once">Toggle Master</button>
-          <button class="btn-danger" id="automation-stop-btn" title="Immediately stop all clicks and release all held keys">Emergency Stop</button>
+          <button class="btn-primary" id="automation-refresh-btn" data-i18n="btn.refresh" title="Reload the current automation state from the background service">Refresh</button>
+          <button class="btn-primary" id="automation-restart-btn" data-i18n="btn.restart_helper" title="Restart the native automation helper process">Restart Helper</button>
+          <button class="btn-primary" id="automation-master-btn" data-i18n="btn.toggle_master" title="Enable or disable all automation clicks at once">Toggle Master</button>
+          <button class="btn-danger" id="automation-stop-btn" data-i18n="btn.emergency_stop" title="Immediately stop all clicks and release all held keys">Emergency Stop</button>
         </div>
         <div class="automation-actions compact" style="margin-top:10px;">
-          <button class="btn-primary" id="automation-toggle-left" title="Enable or disable the left mouse button auto-click">Left</button>
-          <button class="btn-primary" id="automation-toggle-right" title="Enable or disable the right mouse button auto-click">Right</button>
-          <button class="btn-primary" id="automation-toggle-f7" title="Enable or disable the configured F-key auto-press">F-Key</button>
-          <button class="btn-primary" id="automation-toggle-shift" title="Enable or disable holding Shift during clicks">Shift</button>
-          <button class="btn-primary" id="automation-toggle-ctrl" title="Enable or disable holding Ctrl during clicks">Ctrl</button>
+          <button class="btn-primary" id="automation-toggle-left" data-i18n="btn.left" title="Enable or disable the left mouse button auto-click">Left</button>
+          <button class="btn-primary" id="automation-toggle-right" data-i18n="btn.right" title="Enable or disable the right mouse button auto-click">Right</button>
+          <button class="btn-primary" id="automation-toggle-f7" data-i18n="btn.fkey" title="Enable or disable the configured F-key auto-press">F-Key</button>
+          <button class="btn-primary" id="automation-toggle-shift" data-i18n="btn.shift" title="Enable or disable holding Shift during clicks">Shift</button>
+          <button class="btn-primary" id="automation-toggle-ctrl" data-i18n="btn.ctrl" title="Enable or disable holding Ctrl during clicks">Ctrl</button>
         </div>
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Runtime Settings</div>
-        <div class="setting-row"><label>Left ms</label><input type="number" id="automation-left-interval" min="1" value="80" title="Delay in milliseconds between left mouse button clicks" /></div>
-        <div class="setting-row"><label>Right ms</label><input type="number" id="automation-right-interval" min="1" value="120" title="Delay in milliseconds between right mouse button clicks" /></div>
-        <div class="setting-row"><label>F-Key</label>
-          <select id="automation-fkey-code">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.runtime_settings">Runtime Settings</div>
+        <div class="setting-row"><label data-i18n="label.left_ms">Left ms</label><input type="number" id="automation-left-interval" min="1" value="80" title="Delay in milliseconds between left mouse button clicks" /></div>
+        <div class="setting-row"><label data-i18n="label.right_ms">Right ms</label><input type="number" id="automation-right-interval" min="1" value="120" title="Delay in milliseconds between right mouse button clicks" /></div>
+        <div class="setting-row"><label data-i18n="label.fkey">F-Key</label>
+        <select id="automation-fkey-code">
             <option value="F1">F1</option>
             <option value="F2">F2</option>
             <option value="F3">F3</option>
@@ -58,33 +58,33 @@
             <option value="F12">F12</option>
           </select>
         </div>
-        <div class="setting-row"><label>F-Key ms</label><input type="number" id="automation-f7-interval" min="1" value="500" title="Delay in milliseconds between F-key presses" /></div>
-        <div class="setting-row"><label>Jitter %</label><input type="number" id="automation-jitter" min="0" max="100" value="15" title="Adds random variance to all intervals to make clicking less predictable" /></div>
-        <button class="btn-primary" id="automation-save-runtime" style="width:100%;margin-top:4px;">Save Runtime Settings</button>
+        <div class="setting-row"><label data-i18n="label.fkey_ms">F-Key ms</label><input type="number" id="automation-f7-interval" min="1" value="500" title="Delay in milliseconds between F-key presses" /></div>
+        <div class="setting-row"><label data-i18n="label.jitter">Jitter %</label><input type="number" id="automation-jitter" min="0" max="100" value="15" title="Adds random variance to all intervals to make clicking less predictable" /></div>
+        <button class="btn-primary" id="automation-save-runtime" data-i18n="btn.save_runtime" style="width:100%;margin-top:4px;">Save Runtime Settings</button>
       </div>
 
       <div class="automation-card">
-        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Timers</div>
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;" data-i18n="section.timers">Timers</div>
         <div id="automation-buff-list"></div>
       </div>
 
       <div class="automation-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);">Debug</div>
+          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);" data-i18n="section.debug">Debug</div>
           <button class="btn-secondary" id="debug-toggle" style="padding:2px 7px;font-size:10px;">&#9654;</button>
         </div>
         <div id="debug-body" style="display:none;margin-top:10px;">
-          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;">Helper Test Actions</div>
+          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:14px;" data-i18n="debug.helper_test">Helper Test Actions</div>
           <div class="automation-actions compact" style="margin-bottom:14px;">
-            <button class="btn-primary" id="automation-test-left">Left</button>
-            <button class="btn-primary" id="automation-test-right">Right</button>
-            <button class="btn-primary" id="automation-test-f7">F-Key</button>
-            <button class="btn-primary" id="automation-test-release">Release</button>
+            <button class="btn-primary" id="automation-test-left" data-i18n="btn.left">Left</button>
+            <button class="btn-primary" id="automation-test-right" data-i18n="btn.right">Right</button>
+            <button class="btn-primary" id="automation-test-f7" data-i18n="btn.fkey">F-Key</button>
+            <button class="btn-primary" id="automation-test-release" data-i18n="btn.release">Release</button>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
-            <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);">Diagnostics</div>
-            <button class="btn-secondary" id="automation-copy-log" style="padding:3px 8px;font-size:10px;">Copy</button>
+            <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);" data-i18n="debug.diagnostics">Diagnostics</div>
+            <button class="btn-secondary" id="automation-copy-log" data-i18n="btn.copy" style="padding:3px 8px;font-size:10px;">Copy</button>
           </div>
-          <div class="automation-log" id="automation-log">Waiting for automation state…</div>
+          <div class="automation-log" id="automation-log" data-i18n="status.waiting">Waiting for automation state…</div>
         </div>
       </div>
