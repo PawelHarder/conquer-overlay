@@ -101,6 +101,19 @@ app.get('/api/baseline', (req, res) => {
   }
 });
 
+// TEMPORARY — remove after seeding
+app.post('/admin/seed-db', (req, res) => {
+  const secret = process.env.UPLOAD_SECRET;
+  if (!secret || req.headers['x-upload-secret'] !== secret) return res.status(401).end();
+  const fs = require('fs');
+  const chunks = [];
+  req.on('data', c => chunks.push(c));
+  req.on('end', () => {
+    fs.writeFileSync(DB_PATH, Buffer.concat(chunks));
+    res.send('seeded');
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`[Server] Listening on port ${PORT}`);
