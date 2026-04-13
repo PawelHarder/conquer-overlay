@@ -37,7 +37,7 @@ export function initI18n() {
   applyTranslations();
 }
 
-/** Translate all elements with data-i18n and data-i18n-placeholder attributes. */
+/** Translate all elements with data-i18n, data-i18n-placeholder, and data-i18n-title attributes. */
 export function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const text = t(el.dataset.i18n);
@@ -48,4 +48,15 @@ export function applyTranslations() {
     const text = t(el.dataset.i18nPlaceholder);
     if (text) el.placeholder = text;
   });
+
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const text = t(el.dataset.i18nTitle);
+    if (text) el.title = text;
+  });
+
+  const pickerTip = t('tip.hotkey_picker');
+  if (pickerTip) document.querySelectorAll('.hotkey-picker-btn').forEach(el => { el.title = pickerTip; });
+
+  const clearTip = t('tip.hotkey_clear_btn');
+  if (clearTip) document.querySelectorAll('.hotkey-clear-btn').forEach(el => { el.title = clearTip; });
 }

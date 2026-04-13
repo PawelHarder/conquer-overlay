@@ -3,23 +3,23 @@
           <div class="field-label" data-i18n="label.item_name_keyword">Item Name / Keyword</div>
           <div class="search-row">
             <div class="autocomplete-wrap" style="flex:1">
-              <input type="text" id="search-input" placeholder="Search market..." data-i18n-placeholder="placeholder.search" autocomplete="off" title="Type item name or keyword to search the market" />
+              <input type="text" id="search-input" placeholder="Search market..." data-i18n-placeholder="placeholder.search" autocomplete="off" title="Type item name or keyword to search the market" data-i18n-title="tip.search_input" />
               <div class="autocomplete-list" id="search-autocomplete"></div>
             </div>
-            <button class="btn-primary" id="search-btn" data-i18n="btn.search" title="Fetch current market listings matching your filters">Search</button>
+            <button class="btn-primary" id="search-btn" data-i18n="btn.search" title="Fetch current market listings matching your filters" data-i18n-title="tip.search_btn">Search</button>
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div class="field-group">
             <div class="field-label" data-i18n="label.category">Category</div>
-            <select id="search-major" title="Filter by item category">
+            <select id="search-major" title="Filter by item category" data-i18n-title="tip.filter_major">
               <option value="">All Categories</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.minor_class">Minor Class</div>
-            <select id="search-minor" title="Filter by item sub-type within the selected category">
+            <select id="search-minor" title="Filter by item sub-type within the selected category" data-i18n-title="tip.filter_minor_search">
               <option value="">All Minor Classes</option>
             </select>
           </div>
@@ -28,24 +28,24 @@
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
           <div class="field-group">
             <div class="field-label" data-i18n="label.quality">Quality</div>
-            <select id="search-quality" title="Filter by item quality tier">
+            <select id="search-quality" title="Filter by item quality tier" data-i18n-title="tip.filter_quality_search">
               <option value="">All Qualities</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.plus_level">+Level</div>
             <div style="display:flex;gap:6px;align-items:center;">
-              <select id="search-plus" title="Filter by enchantment plus level" style="flex:1;">
+              <select id="search-plus" title="Filter by enchantment plus level" data-i18n-title="tip.filter_plus" style="flex:1;">
                 <option value="">Any Plus</option>
               </select>
-              <label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;" title="Match any enchanted item (+1 or above)">
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;" title="Match any enchanted item (+1 or above)" data-i18n-title="tip.any_plus_search">
                 <input type="checkbox" id="search-plus-any">Any+
               </label>
             </div>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.sockets">Sockets</div>
-            <select id="search-sockets" title="Filter by number of sockets on the item">
+            <select id="search-sockets" title="Filter by number of sockets on the item" data-i18n-title="tip.filter_sockets_search">
               <option value="" data-i18n="option.any_sockets">Any Sockets</option>
               <option value="0" data-i18n="option.no_sockets">No sockets</option>
               <option value="1" data-i18n="option.1_socket">1 socket</option>
@@ -58,25 +58,25 @@
           <div class="field-group">
             <div class="field-label" data-i18n="label.max_price">Max Price</div>
             <div class="price-input-wrap">
-              <input type="text" id="search-maxprice" placeholder="No limit" data-i18n-placeholder="placeholder.no_limit" autocomplete="off" title="Only show listings at or below this price (in gold)" />
+              <input type="text" id="search-maxprice" placeholder="No limit" data-i18n-placeholder="placeholder.no_limit" autocomplete="off" title="Only show listings at or below this price (in gold)" data-i18n-title="tip.max_price_limit" />
               <span class="currency-hint">gold</span>
             </div>
           </div>
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:6px;">
-          <button class="btn-clear" id="search-clear-listings" data-i18n="btn.clear_listings" title="Clear current results without resetting filters">Clear Listings</button>
-          <button class="btn-clear" id="search-clear" data-i18n="btn.clear" title="Clear all filters and results">Clear</button>
+          <button class="btn-clear" id="search-clear-listings" data-i18n="btn.clear_listings" title="Clear current results without resetting filters" data-i18n-title="tip.clear_listings_search">Clear Listings</button>
+          <button class="btn-clear" id="search-clear" data-i18n="btn.clear" title="Clear all filters and results" data-i18n-title="tip.clear_search">Clear</button>
         </div>
       </div>
 
-      <div class="section-label calc-toggle" id="calc-toggle" title="+1 Item Decomposition Calculator">
+      <div class="section-label calc-toggle" id="calc-toggle" title="+1 Item Decomposition Calculator" data-i18n-title="tip.calc_toggle">
         <span data-i18n="section.plus_calc">⚡ Plus Calculator</span> <span id="calc-arrow" style="font-size:9px;color:var(--gold-dim);margin-left:-4px;">▶</span>
       </div>
       <div id="calc-panel" style="display:none;">
         <div class="field-group" style="margin-bottom:8px;">
           <div class="field-label" data-i18n="placeholder.calc_hint">How many +1 items do you have?</div>
-          <input type="number" id="calc-count" min="1" placeholder="e.g. 6562" style="width:100%;" autocomplete="off" title="Enter the total count of +1 items to see what higher-plus items you can craft" />
+          <input type="number" id="calc-count" min="1" placeholder="e.g. 6562" style="width:100%;" autocomplete="off" title="Enter the total count of +1 items to see what higher-plus items you can craft" data-i18n-title="tip.calc_count" />
         </div>
         <div id="calc-output">
           <div class="calc-table"><div class="calc-empty">Enter how many +1 items you have</div></div>

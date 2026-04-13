@@ -11,13 +11,13 @@
         <div class="filter-grid-2">
           <div class="field-group">
             <div class="field-label" data-i18n="label.category">Category</div>
-            <select id="history-major" title="Filter by item category">
+            <select id="history-major" title="Filter by item category" data-i18n-title="tip.filter_major">
               <option value="">Any Category</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.minor_class">Minor Class</div>
-            <select id="history-minor" title="Filter by item sub-type">
+            <select id="history-minor" title="Filter by item sub-type" data-i18n-title="tip.filter_minor_history">
               <option value="">Any Minor Class</option>
             </select>
           </div>
@@ -26,19 +26,19 @@
         <div class="filter-grid-3">
           <div class="field-group">
             <div class="field-label" data-i18n="label.quality">Quality</div>
-            <select id="history-quality" title="Filter by quality tier">
+            <select id="history-quality" title="Filter by quality tier" data-i18n-title="tip.filter_quality_history">
               <option value="">Any Quality</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.plus_level">+Level</div>
-            <select id="history-plus" title="Filter by enchantment plus level">
+            <select id="history-plus" title="Filter by enchantment plus level" data-i18n-title="tip.filter_plus">
               <option value="">Any Plus</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.sockets">Sockets</div>
-            <select id="history-sockets" title="Filter by number of sockets">
+            <select id="history-sockets" title="Filter by number of sockets" data-i18n-title="tip.filter_sockets_history">
               <option value="" data-i18n="option.any">Any</option>
               <option value="0" data-i18n="option.no_sockets">No sockets</option>
               <option value="1" data-i18n="option.1_socket">1 socket</option>
@@ -48,23 +48,23 @@
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:6px;">
-          <button class="btn-clear" id="history-clear" data-i18n="btn.clear" title="Reset all history filters">Clear</button>
-          <button class="btn-primary" id="history-search-btn" data-i18n="btn.load" title="Load price history records matching the current filters">Load</button>
+          <button class="btn-clear" id="history-clear" data-i18n="btn.clear" title="Reset all history filters" data-i18n-title="tip.clear_history">Clear</button>
+          <button class="btn-primary" id="history-search-btn" data-i18n="btn.load" title="Load price history records matching the current filters" data-i18n-title="tip.load_history">Load</button>
         </div>
       </div>
 
       <div class="section-label" data-i18n="section.time_range">Time Range</div>
       <div class="day-filter">
-        <div class="day-btn" data-days="1"  title="Show data from the past 1 day">1d</div>
-        <div class="day-btn" data-days="3"  title="Show data from the past 3 days">3d</div>
-        <div class="day-btn active" data-days="7" title="Show data from the past 7 days">7d</div>
-        <div class="day-btn" data-days="14" title="Show data from the past 14 days">14d</div>
-        <div class="day-btn" data-days="30" title="Show data from the past 30 days">30d</div>
+        <div class="day-btn" data-days="1"  title="Show data from the past 1 day" data-i18n-title="tip.days_1">1d</div>
+        <div class="day-btn" data-days="3"  title="Show data from the past 3 days" data-i18n-title="tip.days_3">3d</div>
+        <div class="day-btn active" data-days="7" title="Show data from the past 7 days" data-i18n-title="tip.days_7">7d</div>
+        <div class="day-btn" data-days="14" title="Show data from the past 14 days" data-i18n-title="tip.days_14">14d</div>
+        <div class="day-btn" data-days="30" title="Show data from the past 30 days" data-i18n-title="tip.days_30">30d</div>
       </div>
 
       <div class="section-label" style="justify-content:space-between;">
         <span data-i18n="section.price_trend">Price Trend</span>
-        <button id="chart-expand-btn" title="Expand chart" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;cursor:pointer;padding:1px 6px;line-height:1;margin-left:auto;transition:all 0.12s;">⤢</button>
+        <button id="chart-expand-btn" title="Expand chart" data-i18n-title="tip.chart_expand" style="background:none;border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;cursor:pointer;padding:1px 6px;line-height:1;margin-left:auto;transition:all 0.12s;">⤢</button>
       </div>
       <div id="history-chart">
         <canvas id="chart-canvas"></canvas>

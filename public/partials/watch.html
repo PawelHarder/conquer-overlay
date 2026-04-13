@@ -3,7 +3,7 @@
         <div class="field-group">
           <div class="field-label" data-i18n="label.item_name">Item Name</div>
           <div class="autocomplete-wrap">
-            <input type="text" id="watch-item" placeholder="e.g. DragonClaw, Phoenix Armor..." data-i18n-placeholder="placeholder.watch_item" autocomplete="off" title="Item name to watch for on the market" />
+            <input type="text" id="watch-item" placeholder="e.g. DragonClaw, Phoenix Armor..." data-i18n-placeholder="placeholder.watch_item" autocomplete="off" title="Item name to watch for on the market" data-i18n-title="tip.watch_input" />
             <div class="autocomplete-list" id="watch-autocomplete"></div>
           </div>
         </div>
@@ -11,13 +11,13 @@
         <div class="filter-grid-2">
           <div class="field-group">
             <div class="field-label" data-i18n="label.category">Category</div>
-            <select id="watch-major" title="Filter watched listings by category">
+            <select id="watch-major" title="Filter watched listings by category" data-i18n-title="tip.watch_major">
               <option value="">Any Category</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.minor_class">Minor Class</div>
-            <select id="watch-minor" title="Filter watched listings by sub-type">
+            <select id="watch-minor" title="Filter watched listings by sub-type" data-i18n-title="tip.watch_minor">
               <option value="">Any Minor Class</option>
             </select>
           </div>
@@ -26,24 +26,24 @@
         <div class="filter-grid-3">
           <div class="field-group">
             <div class="field-label" data-i18n="label.quality">Quality</div>
-            <select id="watch-quality" title="Only alert for matches at this quality or above">
+            <select id="watch-quality" title="Only alert for matches at this quality or above" data-i18n-title="tip.watch_quality">
               <option value="">Any Quality</option>
             </select>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.plus_level">+Level</div>
             <div style="display:flex;gap:6px;align-items:center;">
-              <select id="watch-plus" title="Only alert for items with this enchantment level" style="flex:1;">
+              <select id="watch-plus" title="Only alert for items with this enchantment level" data-i18n-title="tip.watch_plus" style="flex:1;">
                 <option value="">Any Plus</option>
               </select>
-              <label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;" title="Alert for any enchanted item (+1 or above)">
+              <label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;" title="Alert for any enchanted item (+1 or above)" data-i18n-title="tip.watch_any_plus">
                 <input type="checkbox" id="watch-plus-any"><span data-i18n="label.any_plus">Any+</span>
               </label>
             </div>
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.sockets">Sockets</div>
-            <select id="watch-sockets" title="Only alert for items with this socket count">
+            <select id="watch-sockets" title="Only alert for items with this socket count" data-i18n-title="tip.watch_sockets">
               <option value="" data-i18n="option.any">Any</option>
               <option value="0" data-i18n="option.no_sockets">No sockets</option>
               <option value="1" data-i18n="option.1_socket">1 socket</option>
@@ -54,7 +54,7 @@
 
         <div class="field-group" style="margin-bottom:8px;">
           <div class="field-label" data-i18n="label.poll_interval">Poll Interval</div>
-          <select id="watch-interval" title="How often the market is checked for matching listings">
+          <select id="watch-interval" title="How often the market is checked for matching listings" data-i18n-title="tip.watch_interval">
             <option value="10000" data-i18n="option.poll_10s">Every 10 sec</option>
             <option value="15000" selected data-i18n="option.poll_15s">Every 15 sec</option>
             <option value="30000" data-i18n="option.poll_30s">Every 30 sec</option>
@@ -66,7 +66,7 @@
         <div class="history-price-row">
           <div class="field-group">
             <div class="field-label" data-i18n="label.basis">Basis</div>
-            <select id="watch-price-basis" title="Set max price as a fixed value or a percentage below a historical reference">
+            <select id="watch-price-basis" title="Set max price as a fixed value or a percentage below a historical reference" data-i18n-title="tip.watch_price_basis">
               <option value="" data-i18n="option.manual">Manual</option>
               <option value="lowest" data-i18n="option.pct_below_lowest">% below Lowest</option>
               <option value="average" data-i18n="option.pct_below_average">% below Average</option>
@@ -74,22 +74,22 @@
           </div>
           <div class="field-group">
             <div class="field-label" data-i18n="label.pct">%</div>
-            <input type="number" id="watch-price-pct" placeholder="10" min="0" max="99" title="How many percent below the chosen baseline the max price should be set" />
+            <input type="number" id="watch-price-pct" placeholder="10" min="0" max="99" title="How many percent below the chosen baseline the max price should be set" data-i18n-title="tip.watch_pct" />
           </div>
           <div class="field-group">
             <div class="field-label">&nbsp;</div>
-            <button class="btn-primary" id="watch-use-history-btn" style="font-size:10px;padding:6px 8px;" data-i18n="btn.use_history" title="Calculate max price from your saved price history using the chosen basis and percentage">Use History</button>
+            <button class="btn-primary" id="watch-use-history-btn" style="font-size:10px;padding:6px 8px;" data-i18n="btn.use_history" title="Calculate max price from your saved price history using the chosen basis and percentage" data-i18n-title="tip.use_history">Use History</button>
           </div>
         </div>
         <div class="price-input-wrap">
-          <input type="text" id="watch-price" placeholder="Max price (gold)" data-i18n-placeholder="placeholder.max_price" autocomplete="off" title="Only alert when a matching item is listed at or below this price" />
+          <input type="text" id="watch-price" placeholder="Max price (gold)" data-i18n-placeholder="placeholder.max_price" autocomplete="off" title="Only alert when a matching item is listed at or below this price" data-i18n-title="tip.watch_price" />
           <span class="currency-hint">gold</span>
         </div>
 
         <div style="display:flex;justify-content:space-between;margin-top:6px;gap:6px;">
-          <button class="btn-clear" id="watch-clear-listings" data-i18n="btn.clear_listings" title="Clear current match results without stopping the watch">Clear Listings</button>
-          <button class="btn-clear" id="watch-clear" data-i18n="btn.clear" title="Clear all watch filters and stop watching">Clear</button>
-          <button class="btn-primary" id="watch-start-btn" data-i18n="btn.watch" title="Start or stop monitoring the market for matching listings">▶ Watch</button>
+          <button class="btn-clear" id="watch-clear-listings" data-i18n="btn.clear_listings" title="Clear current match results without stopping the watch" data-i18n-title="tip.clear_listings_watch">Clear Listings</button>
+          <button class="btn-clear" id="watch-clear" data-i18n="btn.clear" title="Clear all watch filters and stop watching" data-i18n-title="tip.clear_watch">Clear</button>
+          <button class="btn-primary" id="watch-start-btn" data-i18n="btn.watch" title="Start or stop monitoring the market for matching listings" data-i18n-title="tip.watch_start">▶ Watch</button>
         </div>
       </div>
 
