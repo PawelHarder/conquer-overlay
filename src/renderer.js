@@ -16,6 +16,7 @@ import * as watch       from './renderer/watch.js';
 import * as autoclicker from './renderer/autoclicker.js';
 import * as settings    from './renderer/settings.js';
 import * as plusCalc    from './renderer/plus-calculator.js';
+import { applyFeatureToggles } from './renderer/feature-toggles.js';
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,10 @@ loadTabPartials();
 // 2. Populate the shared dom object — must happen after partials are in the DOM
 buildDomRefs();
 
-// 3. Wire cross-module dependency: ui.switchTab triggers loadHistory
+// 3. Apply feature toggles before any tab switching logic runs
+applyFeatureToggles();
+
+// 4. Wire cross-module dependency: ui.switchTab triggers loadHistory
 registerLoadHistory(loadHistory);
 
 // 4. Set up each module's event listeners

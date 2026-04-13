@@ -176,5 +176,8 @@ export function buildDomRefs() {
     appHotkeyHide:                   $('app-hotkey-hide'),
     appHotkeyQuit:                   $('app-hotkey-quit'),
     appSaveHotkeys:                  $('app-save-hotkeys'),
+    featureWatch:                    $('feature-watch'),
+    featureHistory:                  $('feature-history'),
+    featureAutoclicker:              $('feature-autoclicker'),
   });
 }

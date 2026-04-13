@@ -3,6 +3,7 @@ import { applyTheme, applyUiScale, applyFontPairing, applyOpacity, applyTextOpac
 import { setupHotkeyCapture } from './hotkey-capture.js';
 import { setStatus } from './utils.js';
 import { openKeyboardPicker } from './keyboard-picker.js';
+import { toggleFeature, getFeatureEnabled } from './feature-toggles.js';
 
 export function setup() {
   dom.themeSelect.addEventListener('change',       () => applyTheme(dom.themeSelect.value));
@@ -17,6 +18,15 @@ export function setup() {
     window.electronAPI?.resetWindowPosition?.();
     setStatus('Position reset', 'ok');
   });
+
+  // Feature toggles — restore states and wire checkboxes
+  if (dom.featureWatch)        dom.featureWatch.checked        = getFeatureEnabled('watch');
+  if (dom.featureHistory)      dom.featureHistory.checked      = getFeatureEnabled('history');
+  if (dom.featureAutoclicker)  dom.featureAutoclicker.checked  = getFeatureEnabled('autoclicker');
+
+  dom.featureWatch?.addEventListener('change',       e => toggleFeature('watch',        e.target.checked));
+  dom.featureHistory?.addEventListener('change',     e => toggleFeature('history',      e.target.checked));
+  dom.featureAutoclicker?.addEventListener('change', e => toggleFeature('autoclicker',  e.target.checked));
 
   // Debug card toggle inside settings tab
   const debugToggleBtn = document.getElementById('debug-toggle');
