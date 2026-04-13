@@ -3,7 +3,7 @@ const path = require('path');
 // ── Railway API (production) ──────────────────────────────────────────────────
 // Set this to your Railway deployment URL once deployed.
 // Leave as null to fall back to local SQLite (dev only).
-const RAILWAY_API_URL = null; // e.g. 'https://conquer-collector.up.railway.app'
+const RAILWAY_API_URL = 'https://conquer-overlay-production.up.railway.app';
 
 // ── Local SQLite fallback (dev / admin mode) ──────────────────────────────────
 const DB_RUNNER_PATH = path.join(__dirname, '../../collector/db_query_runner.js');
